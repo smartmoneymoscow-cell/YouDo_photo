@@ -166,9 +166,17 @@
   });
 
   // === Temperature toggle ===
-  $('#paramTemp').addEventListener('change', (e) => {
-    $('#paramTempK').disabled = e.target.value !== 'manual';
+  const paramTemp = $('#paramTemp');
+  const paramTempK = $('#paramTempK');
+  paramTemp.addEventListener('change', () => {
+    const isManual = paramTemp.value === 'manual';
+    paramTempK.disabled = !isManual;
+    paramTempK.style.display = isManual ? '' : 'none';
   });
+  // Init: hide if auto
+  if (paramTemp.value !== 'manual') {
+    paramTempK.style.display = 'none';
+  }
 
   // === Export resolution toggle ===
   $('#exportResolution').addEventListener('change', (e) => {
