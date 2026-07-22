@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import upload, process
+from app.routes import upload, process, score
 
 app = FastAPI(
     title="YouDo Photo API",
@@ -27,6 +27,7 @@ app.add_middleware(
 # Routes
 app.include_router(upload.router)
 app.include_router(process.router)
+app.include_router(score.router)
 
 
 @app.get("/")
