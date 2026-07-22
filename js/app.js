@@ -33,7 +33,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (step === 3) buildGallery();
-    if (step === 4) updateExportSummary();
+    if (step === 4) { buildExportPreview(); updateExportSummary(); }
   }
 
   // Step nav buttons
@@ -222,15 +222,34 @@
       const scoreClass = item.score >= 80 ? 'high' : item.score >= 60 ? 'mid' : 'low';
       const statusIcon = item.status === 'accepted' ? '✅' : item.status === 'rejected' ? '❌' : '🔍';
 
+      const deleteBtn = item.status === 'accepted'
+        ? `<button class="card-delete-btn" data-idx="${item.index}" title="Удалить">🗑️</button>`
+        : '';
+
       card.innerHTML = `
         <img src="${item.thumbnail}" alt="${item.file.name}" loading="lazy">
+        ${deleteBtn}
         <div class="gallery-card-footer">
           <span class="gallery-card-score ${scoreClass}">${item.score}%</span>
           <span class="gallery-card-status">${statusIcon}</span>
         </div>
       `;
 
-      card.addEventListener('click', () => openViewer(item.index));
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.card-delete-btn')) return;
+        openViewer(item.index);
+      });
+
+      const delBtn = card.querySelector('.card-delete-btn');
+      if (delBtn) {
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(delBtn.dataset.idx);
+          state.gallery[idx].status = 'rejected';
+          renderGallery(getCurrentFilter());
+        });
+      }
+
       gallery.appendChild(card);
     });
 
@@ -364,6 +383,35 @@
       }
     };
     img.src = src;
+  }
+
+  // === Export Preview ===
+  function buildExportPreview() {
+    const grid = $('#exportPreviewGrid');
+    grid.innerHTML = '';
+    const accepted = state.gallery.filter(g => g.status === 'accepted');
+    $('#exportPreviewCount').textContent = accepted.length;
+
+    if (accepted.length === 0) {
+      grid.innerHTML = '<div class="export-preview-empty"><p>Нет принятых фото. Вернитесь на шаг 3 и примите кадры.</p></div>';
+      return;
+    }
+
+    accepted.forEach((item) => {
+      const el = document.createElement('div');
+      el.className = 'export-preview-item';
+      el.innerHTML = `
+        <img src="${item.thumbnail}" alt="${item.file.name}">
+        <button class="remove-btn" data-idx="${item.index}" title="Удалить из экспорта">✕</button>
+      `;
+      el.querySelector('.remove-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.gallery[item.index].status = 'rejected';
+        buildExportPreview();
+        updateExportSummary();
+      });
+      grid.appendChild(el);
+    });
   }
 
   // === Export ===
