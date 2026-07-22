@@ -474,8 +474,8 @@ body {
 /* === Gallery === */
 .gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .gallery-empty {
@@ -589,6 +589,20 @@ body {
 
 .gallery-card-status {
   font-size: 16px;
+}
+
+.card-type-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  z-index: 2;
 }
 
 /* === Fullscreen Viewer === */

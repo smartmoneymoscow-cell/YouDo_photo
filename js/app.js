@@ -32,7 +32,10 @@
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (step === 3) buildGallery();
+    if (step === 3) {
+      if (state.gallery.length === 0) buildGallery();
+      else renderGallery(getCurrentFilter());
+    }
     if (step === 4) { buildExportPreview(); updateExportSummary(); }
   }
 
@@ -209,32 +212,40 @@
     const gallery = $('#gallery');
     gallery.innerHTML = '';
 
-    if (state.rawFiles.length === 0) {
+    // Combine all uploaded files into one gallery
+    const allFiles = [];
+    state.rawFiles.forEach(f => allFiles.push({ file: f, type: 'raw' }));
+    state.refFiles.forEach(f => allFiles.push({ file: f, type: 'ref' }));
+
+    if (allFiles.length === 0) {
       gallery.innerHTML = '<div class="gallery-empty"><p>Нет файлов для модерации</p></div>';
       return;
     }
 
-    // Build thumbnails: use JPG refs if available, else try objectURL, else placeholder
+    // Build thumbnails
     const refThumbs = state.refFiles.map(f => URL.createObjectURL(f));
 
-    state.gallery = state.rawFiles.map((file, i) => {
+    state.gallery = allFiles.map((entry, i) => {
+      const { file, type } = entry;
       let thumbnail;
+
       if (isDisplayable(file.name)) {
         thumbnail = URL.createObjectURL(file);
       } else if (refThumbs.length > 0) {
-        // Cycle through reference JPGs as preview
         thumbnail = refThumbs[i % refThumbs.length];
       } else {
-        thumbnail = null; // will render placeholder
+        thumbnail = null;
       }
 
-      return {
-        file,
-        index: i,
-        thumbnail,
-        score: Math.floor(Math.random() * 40) + 60, // TODO: real AI scoring
-        status: 'pending'
-      };
+      // Deterministic score from filename hash
+      let hash = 0;
+      for (let c = 0; c < file.name.length; c++) {
+        hash = ((hash << 5) - hash) + file.name.charCodeAt(c);
+        hash |= 0;
+      }
+      const score = 60 + (Math.abs(hash) % 41); // 60–100
+
+      return { file, index: i, type, thumbnail, score, status: 'pending' };
     });
 
     renderGallery();
@@ -266,12 +277,14 @@
         : '';
 
       const ext = getExt(item.file.name).toUpperCase().replace('.', '');
+      const typeBadge = item.type === 'ref' ? '<span class="card-type-badge">ЭТАЛОН</span>' : '';
       const imgHtml = item.thumbnail
         ? `<img src="${item.thumbnail}" alt="${item.file.name}" loading="lazy">`
         : `<div class="card-placeholder"><span class="card-placeholder-ext">${ext}</span><span class="card-placeholder-name">${item.file.name}</span></div>`;
 
       card.innerHTML = `
         ${imgHtml}
+        ${typeBadge}
         ${deleteBtn}
         <div class="gallery-card-footer">
           <span class="gallery-card-score ${scoreClass}">${item.score}%</span>
