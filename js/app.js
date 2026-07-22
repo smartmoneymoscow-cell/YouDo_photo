@@ -281,35 +281,23 @@
       card.innerHTML = `
         ${imgHtml}
         ${typeBadge}
-        <div class="card-actions">
-          <button class="card-action-btn card-accept-btn" data-idx="${item.index}" title="Принять">✅</button>
-          <button class="card-action-btn card-reject-btn" data-idx="${item.index}" title="Отклонить">❌</button>
-          <button class="card-action-btn card-view-btn" data-idx="${item.index}" title="Просмотр">🔍</button>
-        </div>
+        <button class="card-delete-btn" data-idx="${item.index}" title="Удалить">✕</button>
         <div class="gallery-card-footer">
           <span class="gallery-card-score ${scoreClass}">${item.score}%</span>
-          <span class="gallery-card-status">${statusIcon}</span>
         </div>
       `;
 
-      // Accept button
-      card.querySelector('.card-accept-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        state.gallery[item.index].status = 'accepted';
-        renderGallery(getCurrentFilter());
+      // Click card → open viewer
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.card-delete-btn')) return;
+        openViewer(item.index);
       });
 
-      // Reject button
-      card.querySelector('.card-reject-btn').addEventListener('click', (e) => {
+      // Delete button
+      card.querySelector('.card-delete-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         state.gallery[item.index].status = 'rejected';
         renderGallery(getCurrentFilter());
-      });
-
-      // View button opens fullscreen
-      card.querySelector('.card-view-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        openViewer(item.index);
       });
 
       gallery.appendChild(card);
