@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouDo Photo — Модерация интерьерных фото</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">YouDo Photo</div>
+    <nav class="steps-nav" id="stepsNav">
+      <button class="step-btn active" data-step="1">
+        <span class="step-num">1</span>
+        <span class="step-label">Загрузка</span>
+      </button>
+      <div class="step-arrow">→</div>
+      <button class="step-btn" data-step="2">
+        <span class="step-num">2</span>
+        <span class="step-label">Параметры</span>
+      </button>
+      <div class="step-arrow">→</div>
+      <button class="step-btn" data-step="3">
+        <span class="step-num">3</span>
+        <span class="step-label">Модерация</span>
+      </button>
+      <div class="step-arrow">→</div>
+      <button class="step-btn" data-step="4">
+        <span class="step-num">4</span>
+        <span class="step-label">Экспорт</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- Step 1: Upload -->
+    <section class="step-panel active" id="step1">
+      <h2>Загрузка материалов</h2>
+
+      <div class="upload-grid">
+        <!-- RAW/CR3 files -->
+        <div class="upload-block">
+          <h3>📸 Исходники CR3/RAW</h3>
+          <div class="dropzone" id="dropzoneRaw" data-accept=".cr3,.cr2,.nef,.arw,.raf,.rw2,.dng,.raw">
+            <div class="dropzone-icon">📁</div>
+            <p>Перетащите файлы сюда</p>
+            <span class="dropzone-hint">или нажмите для выбора</span>
+            <input type="file" multiple hidden accept=".cr3,.cr2,.nef,.arw,.raf,.rw2,.dng,.raw">
+          </div>
+          <div class="upload-info" id="rawInfo">
+            <span class="file-count">0 файлов</span>
+            <span class="file-size">0 МБ</span>
+          </div>
+          <div class="file-list" id="rawList"></div>
+        </div>
+
+        <!-- JPG references -->
+        <div class="upload-block">
+          <h3>🎨 JPG-эталоны</h3>
+          <div class="dropzone" id="dropzoneRef" data-accept=".jpg,.jpeg">
+            <div class="dropzone-icon">🖼️</div>
+            <p>Перетащите эталонные JPG</p>
+            <span class="dropzone-hint">или нажмите для выбора</span>
+            <input type="file" multiple hidden accept=".jpg,.jpeg">
+          </div>
+          <div class="upload-info" id="refInfo">
+            <span class="file-count">0 файлов</span>
+          </div>
+          <div class="preview-grid" id="refPreview"></div>
+        </div>
+
+        <!-- Video -->
+        <div class="upload-block">
+          <h3>🎬 Видео квартиры</h3>
+          <div class="dropzone" id="dropzoneVideo" data-accept=".mp4,.mov,.avi,.mkv">
+            <div class="dropzone-icon">🎥</div>
+            <p>Перетащите видео</p>
+            <span class="dropzone-hint">или нажмите для выбора</span>
+            <input type="file" hidden accept=".mp4,.mov,.avi,.mkv">
+          </div>
+          <div class="upload-info" id="videoInfo">
+            <span class="file-count">0 файлов</span>
+          </div>
+          <div class="video-preview" id="videoPreview"></div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-primary" id="btnToStep2" disabled>Далее → Параметры</button>
+      </div>
+    </section>
+
+    <!-- Step 2: Parameters -->
+    <section class="step-panel" id="step2">
+      <h2>Параметры обработки</h2>
+
+      <div class="params-grid">
+        <!-- Selection criteria -->
+        <div class="param-block">
+          <h3>Критерии отбора</h3>
+
+          <div class="param-row">
+            <label>Резкость</label>
+            <input type="range" min="0" max="100" value="70" id="paramSharpness">
+            <span class="range-val" data-for="paramSharpness">70</span>
+          </div>
+
+          <div class="param-row">
+            <label>Экспозиция</label>
+            <input type="range" min="0" max="100" value="70" id="paramExposure">
+            <span class="range-val" data-for="paramExposure">70</span>
+          </div>
+
+          <div class="param-row">
+            <label>Композиция</label>
+            <input type="range" min="0" max="100" value="50" id="paramComposition">
+            <span class="range-val" data-for="paramComposition">50</span>
+          </div>
+
+          <div class="param-row">
+            <label>Порог качества</label>
+            <input type="range" min="0" max="100" value="60" id="paramThreshold">
+            <span class="range-val" data-for="paramThreshold">60%</span>
+          </div>
+
+          <div class="param-row">
+            <label>Порог дубликатов</label>
+            <input type="range" min="50" max="100" value="85" id="paramDuplicate">
+            <span class="range-val" data-for="paramDuplicate">85%</span>
+          </div>
+        </div>
+
+        <!-- Color settings -->
+        <div class="param-block">
+          <h3>Цвет</h3>
+
+          <div class="param-row">
+            <label>Источник эталона</label>
+            <select id="paramColorSource">
+              <option value="jpg">JPG-эталоны</option>
+              <option value="video">Видео</option>
+              <option value="both">Оба</option>
+            </select>
+          </div>
+
+          <div class="param-row">
+            <label>Стиль передачи</label>
+            <select id="paramColorStyle">
+              <option value="neutral">Нейтральный</option>
+              <option value="reference">По эталону</option>
+              <option value="video">По видео</option>
+            </select>
+          </div>
+
+          <div class="param-row">
+            <label>Температура</label>
+            <select id="paramTemp">
+              <option value="auto">Авто</option>
+              <option value="manual">Ручная</option>
+            </select>
+            <input type="number" id="paramTempK" value="5500" min="2000" max="10000" step="100" disabled placeholder="K">
+          </div>
+
+          <div class="param-row">
+            <label>Интенсивность коррекции</label>
+            <input type="range" min="0" max="100" value="70" id="paramIntensity">
+            <span class="range-val" data-for="paramIntensity">70%</span>
+          </div>
+        </div>
+
+        <!-- Restrictions -->
+        <div class="param-block">
+          <h3>Ограничения</h3>
+
+          <label class="checkbox-row">
+            <input type="checkbox" checked id="paramKeepObjects">
+            <span>Не изменять объекты интерьера</span>
+          </label>
+
+          <label class="checkbox-row">
+            <input type="checkbox" checked id="paramKeepGeometry">
+            <span>Сохранять оригинальную геометрию</span>
+          </label>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="paramKeepArtifacts">
+            <span>Не удалять артефакты камеры</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" id="btnBackTo1">← Назад</button>
+        <button class="btn btn-primary" id="btnToStep3">Далее → Модерация</button>
+      </div>
+    </section>
+
+    <!-- Step 3: Moderation / Gallery -->
+    <section class="step-panel" id="step3">
+      <h2>Модерация</h2>
+
+      <div class="moderation-toolbar">
+        <div class="mod-stats" id="modStats">
+          <span>Всего: <b id="statTotal">0</b></span>
+          <span>Принято: <b id="statAccepted">0</b></span>
+          <span>Отклонено: <b id="statRejected">0</b></span>
+          <span>На проверке: <b id="statPending">0</b></span>
+        </div>
+
+        <div class="mod-filters">
+          <button class="filter-btn active" data-filter="all">Все</button>
+          <button class="filter-btn" data-filter="accepted">✅ Принятые</button>
+          <button class="filter-btn" data-filter="rejected">❌ Отклонённые</button>
+          <button class="filter-btn" data-filter="pending">🔍 На проверке</button>
+        </div>
+
+        <div class="mod-actions">
+          <button class="btn btn-sm" id="btnAcceptAll">Принять все выше порога</button>
+          <button class="btn btn-sm btn-danger" id="btnResetAll">Сбросить</button>
+        </div>
+      </div>
+
+      <div class="gallery" id="gallery">
+        <!-- Cards will be inserted here by JS -->
+        <div class="gallery-empty">
+          <p>Загрузите файлы на шаге 1, чтобы начать модерацию</p>
+        </div>
+      </div>
+
+      <!-- Fullscreen viewer -->
+      <div class="fullscreen-viewer" id="fullscreenViewer" hidden>
+        <button class="viewer-close" id="viewerClose">✕</button>
+        <button class="viewer-nav viewer-prev" id="viewerPrev">‹</button>
+        <button class="viewer-nav viewer-next" id="viewerNext">›</button>
+        <div class="viewer-content">
+          <div class="viewer-image" id="viewerImage"></div>
+          <div class="viewer-sidebar">
+            <div class="viewer-score" id="viewerScore"></div>
+            <div class="viewer-histogram" id="viewerHistogram">
+              <canvas id="histogramCanvas" width="256" height="100"></canvas>
+            </div>
+            <div class="viewer-actions">
+              <button class="btn btn-accept" id="viewerAccept">✅ Принять</button>
+              <button class="btn btn-reject" id="viewerReject">❌ Отклонить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" id="btnBackTo2">← Назад</button>
+        <button class="btn btn-primary" id="btnToStep4">Далее → Экспорт</button>
+      </div>
+    </section>
+
+    <!-- Step 4: Export -->
+    <section class="step-panel" id="step4">
+      <h2>Экспорт</h2>
+
+      <div class="export-grid">
+        <div class="export-block">
+          <h3>Настройки вывода</h3>
+
+          <div class="param-row">
+            <label>Формат</label>
+            <select id="exportFormat">
+              <option value="jpg">JPG</option>
+              <option value="webp">WEBP</option>
+              <option value="tiff">TIFF</option>
+            </select>
+          </div>
+
+          <div class="param-row">
+            <label>Качество</label>
+            <input type="range" min="1" max="100" value="90" id="exportQuality">
+            <span class="range-val" data-for="exportQuality">90</span>
+          </div>
+
+          <div class="param-row">
+            <label>Разрешение</label>
+            <select id="exportResolution">
+              <option value="original">Оригинал</option>
+              <option value="4k">4K (3840×2160)</option>
+              <option value="fhd">Full HD (1920×1080)</option>
+              <option value="custom">Кастомное</option>
+            </select>
+          </div>
+
+          <div class="param-row" id="customResRow" hidden>
+            <label>Макс. сторона (px)</label>
+            <input type="number" id="exportCustomRes" value="3840" min="512" max="8192">
+          </div>
+
+          <div class="param-row">
+            <label>Именование файлов</label>
+            <select id="exportNaming">
+              <option value="original">Оригинальное имя</option>
+              <option value="date">Дата_Номер</option>
+              <option value="custom">Шаблон</option>
+            </select>
+          </div>
+
+          <div class="param-row" id="customNameRow" hidden>
+            <label>Шаблон</label>
+            <input type="text" id="exportNamePattern" value="{date}_{num}_{room}" placeholder="{date}_{num}_{room}">
+          </div>
+        </div>
+
+        <div class="export-block">
+          <h3>Итого</h3>
+          <div class="export-summary" id="exportSummary">
+            <div class="summary-row">
+              <span>Принятых кадров:</span>
+              <b id="summaryAccepted">0</b>
+            </div>
+            <div class="summary-row">
+              <span>Формат:</span>
+              <b id="summaryFormat">JPG</b>
+            </div>
+            <div class="summary-row">
+              <span>Качество:</span>
+              <b id="summaryQuality">90</b>
+            </div>
+            <div class="summary-row">
+              <span>Примерный размер:</span>
+              <b id="summarySize">~0 МБ</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="export-preview-section" id="exportPreviewSection">
+        <h3>Итоговые фото (<span id="exportPreviewCount">0</span>)</h3>
+        <div class="export-preview-grid" id="exportPreviewGrid"></div>
+      </div>
+
+      <div class="export-progress" id="exportProgress" hidden>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-text" id="progressText">0%</span>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" id="btnBackTo3">← Назад</button>
+        <button class="btn btn-primary btn-export" id="btnExport">📦 Экспортировать ZIP</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>YouDo Photo © 2026</span>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
