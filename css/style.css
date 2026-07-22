@@ -539,6 +539,34 @@ body {
   display: block;
 }
 
+.card-placeholder {
+  width: 100%;
+  aspect-ratio: 4/3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  gap: 8px;
+  padding: 12px;
+}
+
+.card-placeholder-ext {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+.card-placeholder-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  word-break: break-all;
+  max-height: 2.8em;
+  overflow: hidden;
+}
+
 .gallery-card-footer {
   padding: 8px 10px;
   display: flex;

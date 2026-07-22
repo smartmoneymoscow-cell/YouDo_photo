@@ -188,6 +188,22 @@
     $('#customNameRow').hidden = e.target.value !== 'custom';
   });
 
+  // === File type helpers ===
+  const IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif'];
+  const RAW_EXTS = ['.cr3', '.cr2', '.nef', '.arw', '.raf', '.rw2', '.dng', '.raw', '.orf', '.srw', '.pef'];
+
+  function getExt(name) {
+    return ('.' + name.split('.').pop()).toLowerCase();
+  }
+
+  function isDisplayable(name) {
+    return IMAGE_EXTS.includes(getExt(name));
+  }
+
+  function isRaw(name) {
+    return RAW_EXTS.includes(getExt(name));
+  }
+
   // === Gallery ===
   function buildGallery() {
     const gallery = $('#gallery');
@@ -198,13 +214,28 @@
       return;
     }
 
-    state.gallery = state.rawFiles.map((file, i) => ({
-      file,
-      index: i,
-      thumbnail: URL.createObjectURL(file),
-      score: Math.floor(Math.random() * 40) + 60, // TODO: real AI scoring
-      status: 'pending'
-    }));
+    // Build thumbnails: use JPG refs if available, else try objectURL, else placeholder
+    const refThumbs = state.refFiles.map(f => URL.createObjectURL(f));
+
+    state.gallery = state.rawFiles.map((file, i) => {
+      let thumbnail;
+      if (isDisplayable(file.name)) {
+        thumbnail = URL.createObjectURL(file);
+      } else if (refThumbs.length > 0) {
+        // Cycle through reference JPGs as preview
+        thumbnail = refThumbs[i % refThumbs.length];
+      } else {
+        thumbnail = null; // will render placeholder
+      }
+
+      return {
+        file,
+        index: i,
+        thumbnail,
+        score: Math.floor(Math.random() * 40) + 60, // TODO: real AI scoring
+        status: 'pending'
+      };
+    });
 
     renderGallery();
   }
@@ -234,8 +265,13 @@
         ? `<button class="card-delete-btn" data-idx="${item.index}" title="Удалить">🗑️</button>`
         : '';
 
+      const ext = getExt(item.file.name).toUpperCase().replace('.', '');
+      const imgHtml = item.thumbnail
+        ? `<img src="${item.thumbnail}" alt="${item.file.name}" loading="lazy">`
+        : `<div class="card-placeholder"><span class="card-placeholder-ext">${ext}</span><span class="card-placeholder-name">${item.file.name}</span></div>`;
+
       card.innerHTML = `
-        <img src="${item.thumbnail}" alt="${item.file.name}" loading="lazy">
+        ${imgHtml}
         ${deleteBtn}
         <div class="gallery-card-footer">
           <span class="gallery-card-score ${scoreClass}">${item.score}%</span>
@@ -311,13 +347,25 @@
     viewerIndex = index;
     const item = state.gallery[index];
 
-    $('#viewerImage').innerHTML = `<img src="${item.thumbnail}" alt="${item.file.name}">`;
+    const ext = getExt(item.file.name).toUpperCase().replace('.', '');
+    if (item.thumbnail) {
+      $('#viewerImage').innerHTML = `<img src="${item.thumbnail}" alt="${item.file.name}">`;
+    } else {
+      $('#viewerImage').innerHTML = `<div class="card-placeholder" style="width:100%;height:60vh;border-radius:8px"><span class="card-placeholder-ext" style="font-size:64px">${ext}</span><span class="card-placeholder-name" style="font-size:16px">${item.file.name}</span></div>`;
+    }
+
+    const scoreColor = item.score >= 80 ? 'var(--success)' : item.score >= 60 ? 'var(--warning)' : 'var(--danger)';
     $('#viewerScore').innerHTML = `
-      <div style="font-size:32px;font-weight:700;color:${item.score >= 80 ? 'var(--success)' : item.score >= 60 ? 'var(--warning)' : 'var(--danger)'}">${item.score}%</div>
+      <div style="font-size:32px;font-weight:700;color:${scoreColor}">${item.score}%</div>
       <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${item.file.name}</div>
     `;
 
-    drawHistogram(item.thumbnail);
+    if (item.thumbnail) {
+      drawHistogram(item.thumbnail);
+    } else {
+      clearHistogram();
+    }
+
     $('#fullscreenViewer').hidden = false;
     document.body.style.overflow = 'hidden';
   }
@@ -359,6 +407,20 @@
   });
 
   // === Histogram ===
+  function clearHistogram() {
+    const canvas = $('#histogramCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 100;
+    ctx.clearRect(0, 0, 256, 100);
+    ctx.fillStyle = 'rgba(91, 127, 255, 0.1)';
+    ctx.fillRect(0, 0, 256, 100);
+    ctx.fillStyle = 'rgba(91, 127, 255, 0.4)';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Нет превью', 128, 55);
+  }
+
   function drawHistogram(src) {
     const canvas = $('#histogramCanvas');
     const ctx = canvas.getContext('2d');
