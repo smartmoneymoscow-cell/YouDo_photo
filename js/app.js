@@ -272,10 +272,6 @@
       const scoreClass = item.score >= 80 ? 'high' : item.score >= 60 ? 'mid' : 'low';
       const statusIcon = item.status === 'accepted' ? '✅' : item.status === 'rejected' ? '❌' : '🔍';
 
-      const deleteBtn = item.status === 'accepted'
-        ? `<button class="card-delete-btn" data-idx="${item.index}" title="Удалить">🗑️</button>`
-        : '';
-
       const ext = getExt(item.file.name).toUpperCase().replace('.', '');
       const typeBadge = item.type === 'ref' ? '<span class="card-type-badge">ЭТАЛОН</span>' : '';
       const imgHtml = item.thumbnail
@@ -285,27 +281,36 @@
       card.innerHTML = `
         ${imgHtml}
         ${typeBadge}
-        ${deleteBtn}
+        <div class="card-actions">
+          <button class="card-action-btn card-accept-btn" data-idx="${item.index}" title="Принять">✅</button>
+          <button class="card-action-btn card-reject-btn" data-idx="${item.index}" title="Отклонить">❌</button>
+          <button class="card-action-btn card-view-btn" data-idx="${item.index}" title="Просмотр">🔍</button>
+        </div>
         <div class="gallery-card-footer">
           <span class="gallery-card-score ${scoreClass}">${item.score}%</span>
           <span class="gallery-card-status">${statusIcon}</span>
         </div>
       `;
 
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('.card-delete-btn')) return;
-        openViewer(item.index);
+      // Accept button
+      card.querySelector('.card-accept-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.gallery[item.index].status = 'accepted';
+        renderGallery(getCurrentFilter());
       });
 
-      const delBtn = card.querySelector('.card-delete-btn');
-      if (delBtn) {
-        delBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const idx = parseInt(delBtn.dataset.idx);
-          state.gallery[idx].status = 'rejected';
-          renderGallery(getCurrentFilter());
-        });
-      }
+      // Reject button
+      card.querySelector('.card-reject-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.gallery[item.index].status = 'rejected';
+        renderGallery(getCurrentFilter());
+      });
+
+      // View button opens fullscreen
+      card.querySelector('.card-view-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openViewer(item.index);
+      });
 
       gallery.appendChild(card);
     });
