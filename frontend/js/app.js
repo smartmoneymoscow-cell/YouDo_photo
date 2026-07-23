@@ -61,6 +61,7 @@
   $('#btnBackTo2').addEventListener('click', () => goToStep(2));
   $('#btnBackTo3').addEventListener('click', () => goToStep(3));
   $('#btnToStep4').addEventListener('click', () => goToStep(4));
+  $('#btnGoToExport').addEventListener('click', () => goToStep(4));
 
   // ═══ Dropzones ═══
   function initDropzone(dropzoneEl, inputEl, onFiles) {

@@ -432,6 +432,12 @@ body {
   border-color: var(--primary);
 }
 
+.mod-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
 .mod-threshold {
   display: flex;
   align-items: center;
