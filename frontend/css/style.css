@@ -492,6 +492,12 @@ body {
   color: var(--text-muted);
 }
 
+.gallery-empty-hint {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--warning, #ff9800);
+}
+
 .gallery-card {
   background: var(--surface);
   border: 2px solid var(--border);

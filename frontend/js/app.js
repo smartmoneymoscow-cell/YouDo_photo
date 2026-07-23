@@ -42,7 +42,13 @@
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (step === 3) renderGallery();
+    if (step === 3) {
+      // При входе на шаг 3 показываем принятые фото по умолчанию
+      $$('.filter-btn').forEach(b => b.classList.remove('active'));
+      const acceptedBtn = $('.filter-btn[data-filter="accepted"]');
+      if (acceptedBtn) acceptedBtn.classList.add('active');
+      renderGallery('accepted');
+    }
     if (step === 4) { buildExportPreview(); updateExportSummary(); }
   }
 
@@ -254,6 +260,14 @@
         <div class="summary-stat"><span class="stat-num">${data.model}</span><span class="stat-label">модель</span></div>
       </div>
     `;
+    // Синхронизировать ползунок порога в галерее с фактическим порогом анализа
+    const thresholdPct = Math.round(data.threshold * 100);
+    const gallerySlider = $('#galleryThreshold');
+    if (gallerySlider) {
+      gallerySlider.value = thresholdPct;
+      const display = $(`.range-val[data-for="galleryThreshold"]`);
+      if (display) display.textContent = thresholdPct + '%';
+    }
   }
 
   // ═══ Галерея ═══
@@ -266,7 +280,12 @@
       : state.results.filter(r => r.status === filter);
 
     if (filtered.length === 0) {
-      gallery.innerHTML = '<div class="gallery-empty"><p>Нет фото по этому фильтру</p></div>';
+      const acceptedCount = state.results.filter(r => r.status === 'accepted').length;
+      let hint = '';
+      if (filter === 'accepted' && acceptedCount === 0) {
+        hint = '<p class="gallery-empty-hint">Попробуйте снизить порог сходства на шаге 2 или в блоке «Изменить порог» ниже</p>';
+      }
+      gallery.innerHTML = `<div class="gallery-empty"><p>Нет фото по этому фильтру</p>${hint}</div>`;
       return;
     }
 
