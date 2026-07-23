@@ -10,7 +10,9 @@ numpy>=1.24.0
 opencv-python-headless>=4.8.0
 Pillow>=10.0.0
 
-# Core: AI models (torch installed separately in Dockerfile from CPU index)
+# Core: AI models
+torch>=2.0.0
+torchvision>=0.15.0
 open-clip-torch>=2.20.0
 
 # Memory monitoring
