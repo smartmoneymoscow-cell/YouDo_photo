@@ -71,6 +71,7 @@ def create_session() -> Session:
 
 RAW_EXT = {'.cr3', '.cr2', '.nef', '.arw', '.raf', '.rw2', '.dng', '.raw', '.orf', '.srw', '.pef'}
 IMG_EXT = {'.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp', '.webp'}
+VID_EXT = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.wmv', '.flv', '.3gp'}
 
 def find_files(directory: str) -> list[str]:
     all_ext = RAW_EXT | IMG_EXT
@@ -80,6 +81,39 @@ def find_files(directory: str) -> list[str]:
             if Path(f).suffix.lower() in all_ext:
                 files.append(os.path.join(root, f))
     return files
+
+def extract_frames_from_video(video_path: str, output_dir: str, fps: float = 1.0, max_frames: int = 30) -> list[str]:
+    """
+    Извлекает кадры из видео через ffmpeg.
+    fps: кадров в секунду (1.0 = 1 кадр в секунду)
+    max_frames: максимум кадров на видео
+    """
+    import subprocess
+
+    os.makedirs(output_dir, exist_ok=True)
+    basename = Path(video_path).stem
+
+    cmd = [
+        "ffmpeg", "-i", video_path,
+        "-vf", f"fps={fps}",
+        "-q:v", "2",
+        "-frames:v", str(max_frames),
+        os.path.join(output_dir, f"{basename}_frame_%04d.jpg"),
+        "-y", "-hide_banner", "-loglevel", "error"
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=120)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        print(f"ffmpeg error for {video_path}: {e}")
+        return []
+
+    frames = sorted([
+        os.path.join(output_dir, f)
+        for f in os.listdir(output_dir)
+        if f.startswith(f"{basename}_frame_") and f.endswith(".jpg")
+    ])
+    return frames
 
 def image_to_histogram_vector(path: str, bins: int = 64) -> np.ndarray:
     """
@@ -218,6 +252,73 @@ async def upload_photos(session_id: str, files: list[UploadFile] = File(...)):
         session.photo_files.append(dest)
     return {"saved": saved, "total_photos": len(session.photo_files)}
 
+@app.get("/api/upload/status/{session_id}")
+async def upload_status(session_id: str):
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(404, "Сессия не найдена")
+    return {
+        "session_id": session.id,
+        "status": session.status,
+        "ref_count": len(session.ref_files),
+        "photo_count": len(session.photo_files),
+        "ref_files": [os.path.basename(f) for f in session.ref_files],
+        "photo_files": [os.path.basename(f) for f in session.photo_files],
+    }
+
+@app.post("/api/upload/video/{session_id}")
+async def upload_video(
+    session_id: str,
+    files: list[UploadFile] = File(...),
+    fps: float = 1.0,
+    max_frames: int = 30,
+):
+    """
+    Зрузает видео и извлекает кадры через ffmpeg.
+    Параметры:
+      fps — кадров в секунду (1.0 = 1 кадр/сек)
+      max_frames — максимум кадров на одно видео
+    Извлечённые кадры добавляются как фотографии для анализа.
+    """
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(404, "Сессия не найдена")
+
+    video_dir = os.path.join(UPLOAD_DIR, session_id, "videos")
+    frames_dir = session.photo_dir  # Кадры сразу в photos/ чтобы find_files их нашёл
+    os.makedirs(video_dir, exist_ok=True)
+    os.makedirs(frames_dir, exist_ok=True)
+
+    saved_videos = []
+    extracted_frames = []
+
+    for f in files:
+        ext = Path(f.filename).suffix.lower()
+        if ext not in VID_EXT:
+            continue
+
+        # Сохраняем видео
+        dest = os.path.join(video_dir, f.filename)
+        content = await f.read()
+        with open(dest, "wb") as out:
+            out.write(content)
+        saved_videos.append(f.filename)
+
+        # Извлекаем кадры
+        frames = extract_frames_from_video(dest, frames_dir, fps=fps, max_frames=max_frames)
+        extracted_frames.extend(frames)
+
+        # Добавляем кадры как «фото» для анализа
+        for frame_path in frames:
+            session.photo_files.append(frame_path)
+
+    return {
+        "saved_videos": saved_videos,
+        "extracted_frames": len(extracted_frames),
+        "total_photos": len(session.photo_files),
+        "frames": [os.path.basename(f) for f in extracted_frames],
+    }
+
 class AnalyzeRequest(BaseModel):
     model: str = "histogram_demo"
     threshold: float = 0.75
@@ -282,6 +383,8 @@ async def api_export_json(session_id: str):
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(404, "Сессия не найдена")
+    if session.status != "analyzed":
+        raise HTTPException(400, "Анализ не выполнен")
     content = json.dumps({
         "session_id": session.id,
         "total": len(session.results),
@@ -297,6 +400,8 @@ async def api_export_json(session_id: str):
 async def api_models():
     return {
         "histogram_demo": {"dim": 192, "description": "Демо: цветовые гистограммы (numpy)", "fast": True},
+        "supported_image_formats": sorted(RAW_EXT | IMG_EXT),
+        "supported_video_formats": sorted(VID_EXT),
         "note": "Для полной модели установите torch + open-clip-torch",
     }
 

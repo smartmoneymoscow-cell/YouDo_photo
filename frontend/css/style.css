@@ -194,6 +194,31 @@ body {
 .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
 .fsize { white-space: nowrap; }
 
+.video-options {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.video-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-options input {
+  width: 64px;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+}
+
 .preview-grid {
   display: flex;
   flex-wrap: wrap;

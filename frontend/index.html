@@ -43,11 +43,11 @@
         <!-- RAW/CR3 -->
         <div class="upload-block">
           <h3>📸 Исходники CR3/RAW</h3>
-          <div class="dropzone" id="dropzoneRaw" data-accept=".cr3,.cr2,.nef,.arw,.raf,.rw2,.dng,.raw">
+          <div class="dropzone" id="dropzoneRaw" data-accept=".cr3,.cr2,.nef,.arw,.raf,.rw2,.dng,.raw,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp">
             <div class="dropzone-icon">📁</div>
-            <p>Перетащите RAW файлы сюда</p>
+            <p>Перетащите RAW/JPG файлы сюда</p>
             <span class="dropzone-hint">или нажмите для выбора</span>
-            <input type="file" multiple hidden accept=".cr3,.cr2,.nef,.arw,.raf,.rw2,.dng,.raw">
+            <input type="file" multiple hidden accept=".cr3,.cr2,.nef,.arw,.raf,.rw2,.dng,.raw,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp">
           </div>
           <div class="upload-info" id="rawInfo">
             <span class="file-count">0 файлов</span>
@@ -56,14 +56,34 @@
           <div class="file-list" id="rawList"></div>
         </div>
 
+        <!-- Видео -->
+        <div class="upload-block">
+          <h3>🎬 Видео</h3>
+          <div class="dropzone" id="dropzoneVideo" data-accept=".mp4,.mov,.avi,.mkv,.webm,.m4v,.wmv,.flv,.3gp">
+            <div class="dropzone-icon">🎞️</div>
+            <p>Перетащите видеофайлы</p>
+            <span class="dropzone-hint">Кадры извлекаются автоматически (ffmpeg)</span>
+            <input type="file" multiple hidden accept=".mp4,.mov,.avi,.mkv,.webm,.m4v,.wmv,.flv,.3gp">
+          </div>
+          <div class="upload-info" id="videoInfo">
+            <span class="file-count">0 файлов</span>
+            <span class="file-size">0 МБ</span>
+          </div>
+          <div class="video-options">
+            <label>FPS: <input type="number" id="videoFps" value="1" min="0.2" max="5" step="0.2"></label>
+            <label>Макс. кадров: <input type="number" id="videoMaxFrames" value="30" min="1" max="200"></label>
+          </div>
+          <div class="file-list" id="videoList"></div>
+        </div>
+
         <!-- JPG эталоны -->
         <div class="upload-block">
           <h3>🎨 JPG-эталоны</h3>
-          <div class="dropzone" id="dropzoneRef" data-accept=".jpg,.jpeg">
+          <div class="dropzone" id="dropzoneRef" data-accept=".jpg,.jpeg,.png,.webp">
             <div class="dropzone-icon">🖼️</div>
-            <p>Перетащите эталонные JPG</p>
-            <span class="dropzone-hint">или нажмите для выбора</span>
-            <input type="file" multiple hidden accept=".jpg,.jpeg">
+            <p>Перетащите эталонные фото</p>
+            <span class="dropzone-hint">JPG, PNG, WebP</span>
+            <input type="file" multiple hidden accept=".jpg,.jpeg,.png,.webp">
           </div>
           <div class="upload-info" id="refInfo">
             <span class="file-count">0 файлов</span>

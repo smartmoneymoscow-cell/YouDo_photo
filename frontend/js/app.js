@@ -5,13 +5,16 @@
   'use strict';
 
   // ═══ Конфигу═══
-  const API_BASE = '';  // Same origin — сервер раздаёт и API и фронтенд
+  // Если сайт на Render — API_BASE будет текущий origin.
+  // Для локальной разработки — пустая строка (same origin).
+  const API_BASE = window.YOUDO_API_BASE || '';
 
   // ═══ Состояние ═══
   const state = {
     sessionId: null,
     rawFiles: [],
     refFiles: [],
+    videoFiles: [],
     currentStep: 1,
     results: [],       // [{path, score, rank, accepted, status}]
     params: {
@@ -84,6 +87,28 @@
     });
   }
 
+  // Видео файлы
+  initDropzone($('#dropzoneVideo'), $('#dropzoneVideo input[type="file"]'), (files) => {
+    for (const f of files) state.videoFiles.push(f);
+    updateVideoInfo();
+    updateNextButton();
+  });
+
+  function updateVideoInfo() {
+    const count = state.videoFiles.length;
+    const size = state.videoFiles.reduce((s, f) => s + f.size, 0);
+    $('#videoInfo .file-count').textContent = `${count} файлов`;
+    $('#videoInfo .file-size').textContent = formatSize(size);
+    const list = $('#videoList');
+    list.innerHTML = '';
+    state.videoFiles.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'file-list-item';
+      item.innerHTML = `<span class="fname">${f.name}</span><span class="fsize">${formatSize(f.size)}</span>`;
+      list.appendChild(item);
+    });
+  }
+
   // JPG эталоны
   initDropzone($('#dropzoneRef'), $('#dropzoneRef input[type="file"]'), (files) => {
     for (const f of files) state.refFiles.push(f);
@@ -106,7 +131,7 @@
   }
 
   function updateNextButton() {
-    $('#btnToStep2').disabled = state.rawFiles.length === 0 || state.refFiles.length === 0;
+    $('#btnToStep2').disabled = state.rawFiles.length === 0 && state.videoFiles.length === 0 || state.refFiles.length === 0;
   }
 
   // ═══ Range sliders ═══
@@ -146,10 +171,21 @@
       progressFill.style.width = '15%';
       await uploadFiles(`/api/upload/references/${state.sessionId}`, state.refFiles);
 
-      // 3. Загрузить RAW
-      progressText.textContent = `Загрузка RAW файлов (${state.rawFiles.length})...`;
-      progressFill.style.width = '30%';
-      await uploadFiles(`/api/upload/photos/${state.sessionId}`, state.rawFiles);
+      // 3. Загрузить RAW фото
+      if (state.rawFiles.length > 0) {
+        progressText.textContent = `Загрузка RAW файлов (${state.rawFiles.length})...`;
+        progressFill.style.width = '30%';
+        await uploadFiles(`/api/upload/photos/${state.sessionId}`, state.rawFiles);
+      }
+
+      // 3b. Загрузить видео (если есть)
+      if (state.videoFiles.length > 0) {
+        const fps = parseFloat($('#videoFps').value) || 1;
+        const maxFrames = parseInt($('#videoMaxFrames').value) || 30;
+        progressText.textContent = `Загрузка видео (${state.videoFiles.length}) + извлечение кадров...`;
+        progressFill.style.width = '35%';
+        await uploadVideo(`/api/upload/video/${state.sessionId}`, state.videoFiles, fps, maxFrames);
+      }
 
       // 4. Запустить анализ
       progressText.textContent = 'AI-анализ: извлечение эмбеддингов...';
@@ -447,6 +483,15 @@
     for (const f of files) formData.append('files', f);
     const res = await fetch(API_BASE + path, { method: 'POST', body: formData });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    return res.json();
+  }
+
+  async function uploadVideo(path, files, fps, maxFrames) {
+    const formData = new FormData();
+    for (const f of files) formData.append('files', f);
+    const url = `${API_BASE + path}?fps=${fps}&max_frames=${maxFrames}`;
+    const res = await fetch(url, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(`Video upload failed: ${res.status}`);
     return res.json();
   }
 

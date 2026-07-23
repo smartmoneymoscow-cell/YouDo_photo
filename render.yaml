@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: youdo-photo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+    healthCheckPath: /health
