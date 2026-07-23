@@ -1,8 +1,7 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libraw-dev \
+    ffmpeg libraw-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -12,22 +11,18 @@ ENV MKL_NUM_THREADS=1
 ENV OPENBLAS_NUM_THREADS=1
 ENV PYTHONUNBUFFERED=1
 
-COPY requirements.txt .
+# Install torch CPU-only
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-# Single pip install: use PyPI + PyTorch CPU index together
+# Install the rest from PyPI
 RUN pip install --no-cache-dir \
-    -r requirements.txt \
-    --extra-index-url https://download.pytorch.org/whl/cpu
+    fastapi uvicorn python-multipart python-dotenv \
+    rawpy numpy opencv-python-headless Pillow \
+    open-clip-torch psutil
 
 COPY core/ core/
 COPY backend/app/ backend/app/
 COPY frontend/ frontend/
-
-# Pre-download CLIP ViT-B/32
-RUN python -c "\
-import open_clip; \
-open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s347b_k799e'); \
-print('OK')"
 
 RUN mkdir -p uploads
 
