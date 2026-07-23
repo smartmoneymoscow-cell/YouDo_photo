@@ -18,7 +18,7 @@
     currentStep: 1,
     results: [],       // [{path, score, rank, accepted, status}]
     params: {
-      model: 'openclip_vit_l14',
+      model: null,  // auto-select based on available RAM
       threshold: 0.75,
       topK: 0,
       refMethod: 'max',
@@ -149,7 +149,7 @@
     state.params.threshold = parseInt($('#paramThreshold').value) / 100;
     state.params.topK = parseInt($('#paramTopK').value) || 0;
     state.params.refMethod = $('#paramRefMethod').value;
-    state.params.model = $('#paramModel').value;
+    state.params.model = $('#paramModel').value || null;
     state.params.maxSide = parseInt($('#paramMaxSide').value);
 
     const progressEl = $('#analysisProgress');
