@@ -1,31 +1,19 @@
-def read_image(path: str, max_side: int = 1024) -> np.ndarray:
+def read_image(path: str, max_side: int = 512) -> np.ndarray:
     """Читает JPG/PNG/TIFF → numpy RGB. Memory-efficient."""
-    from PIL import Image
-    import io
+    import cv2
+    import numpy as np
 
-    # Use PIL with draft() for memory-efficient JPEG loading
-    try:
-        pil_img = Image.open(path)
-    except Exception as e:
+    # Try to load at reduced resolution directly (saves memory for large JPEGs)
+    img = cv2.imread(path, cv2.IMREAD_REDUCED_COLOR_4)
+    if img is None:
         raise FileNotFoundError(f"Не удалось прочитать: {path}")
 
-    # For JPEG: use draft() to load at reduced resolution directly
-    w, h = pil_img.size
-    if max(w, h) > max_side:
-        # draft() hints the decoder to load a reduced version
-        if pil_img.format == 'JPEG':
-            draft_side = max_side // 2  # load even smaller, then resize
-            pil_img.draft('RGB', (draft_side, draft_side))
-        pil_img = pil_img.convert('RGB')
-        w2, h2 = pil_img.size
-        if max(w2, h2) > max_side:
-            scale = max_side / max(w2, h2)
-            pil_img = pil_img.resize(
-                (int(w2 * scale), int(h2 * scale)),
-                Image.LANCZOS
-            )
-    else:
-        pil_img = pil_img.convert('RGB')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    h, w = img.shape[:2]
 
-    import numpy as np
-    return np.array(pil_img)
+    if max(h, w) > max_side:
+        scale = max_side / max(h, w)
+        img = cv2.resize(img, (int(w * scale), int(h * scale)),
+                         interpolation=cv2.INTER_AREA)
+
+    return img
