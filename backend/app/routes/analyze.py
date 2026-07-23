@@ -12,7 +12,7 @@ router = APIRouter(tags=["analyze"])
 class AnalyzeRequest(BaseModel):
     model: str | None = Field(default=None, description="Модель эмбеддингов (auto-select по RAM)")
     threshold: float = Field(default=0.75, ge=0.0, le=1.0, description="Порог сходства")
-    top_k: int = Field(default=None, description="Только top-K лучших")
+    top_k: int | None = Field(default=None, description="Только top-K лучших")
     ref_method: str = Field(default="max", description="Метод сравнения: max/mean/weighted")
     max_side: int = Field(default=1024, description="Макс. сторона при чтении")
 

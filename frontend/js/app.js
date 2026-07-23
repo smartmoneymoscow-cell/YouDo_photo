@@ -205,7 +205,7 @@
         method: 'POST',
         timeoutMs: 300000,
         body: JSON.stringify({
-          model: state.params.model,
+          model: state.params.model || null,
           threshold: state.params.threshold,
           top_k: state.params.topK || null,
           ref_method: state.params.refMethod,
