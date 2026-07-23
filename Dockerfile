@@ -27,8 +27,12 @@ COPY frontend/ frontend/
 
 RUN mkdir -p uploads
 
-# Debug: test imports before starting
-RUN python -c "import backend.app.main; print('Import OK')"
+# Pre-download ResNet50 weights (~100MB, fits in 512MB free tier)
+RUN python -c "\
+from torchvision.models import resnet50, ResNet50_Weights; \
+model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2); \
+print('ResNet50 cached OK'); \
+del model"
 
 EXPOSE 8000
 

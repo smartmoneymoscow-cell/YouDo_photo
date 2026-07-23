@@ -37,7 +37,7 @@ def pick_model(requested=None):
     if requested and requested in _model_cache:
         return requested
     if available >= 2000:
-        return requested or "openclip_vit_l14"
+        return requested or "clip_vit_b32"
     if available >= 800:
         return requested if requested in ("clip_vit_b32", "resnet50") else "clip_vit_b32"
     return "resnet50"
