@@ -138,6 +138,37 @@ async def health():
     return {"status": "ok"}
 
 
+# ─── Debug: проверка сессии ───
+@app.get("/api/debug/{session_id}")
+async def debug_session(session_id: str):
+    """Debug: показывает содержимое сессии."""
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(404, "Сессия не найдена")
+
+    import os
+    photo_files_on_disk = []
+    if os.path.isdir(session.photo_dir):
+        photo_files_on_disk = os.listdir(session.photo_dir)
+
+    ref_files_on_disk = []
+    if os.path.isdir(session.ref_dir):
+        ref_files_on_disk = os.listdir(session.ref_dir)
+
+    return {
+        "session_id": session.id,
+        "status": session.status,
+        "photo_dir": session.photo_dir,
+        "ref_dir": session.ref_dir,
+        "photo_files_count": len(session.photo_files),
+        "ref_files_count": len(session.ref_files),
+        "photo_files_on_disk": photo_files_on_disk[:20],
+        "ref_files_on_disk": ref_files_on_disk[:10],
+        "results_count": len(session.results),
+        "results_sample": session.results[:3] if session.results else [],
+    }
+
+
 # ─── Фронтенд ───
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():

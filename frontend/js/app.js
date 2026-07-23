@@ -43,11 +43,11 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (step === 3) {
-      // При входе на шаг 3 показываем принятые фото по умолчанию
+      // При входе на шаг 3 — показываем ВСЕ фото (принятые с зелёной рамкой)
       $$('.filter-btn').forEach(b => b.classList.remove('active'));
-      const acceptedBtn = $('.filter-btn[data-filter="accepted"]');
-      if (acceptedBtn) acceptedBtn.classList.add('active');
-      renderGallery('accepted');
+      const allBtn = $('.filter-btn[data-filter="all"]');
+      if (allBtn) allBtn.classList.add('active');
+      renderGallery('all');
     }
     if (step === 4) { buildExportPreview(); updateExportSummary(); }
   }
@@ -224,10 +224,30 @@
       progressText.textContent = `Готово! ${analyzeRes.accepted_count} из ${analyzeRes.total} принято`;
 
       // Сохраняем результаты
-      state.results = analyzeRes.results.map(r => ({
+      console.log('[Analyze] Response:', JSON.stringify(analyzeRes).substring(0, 500));
+      console.log('[Analyze] results count:', analyzeRes.results?.length, 'accepted:', analyzeRes.accepted_count);
+
+      state.results = (analyzeRes.results || []).map(r => ({
         ...r,
         status: r.accepted ? 'accepted' : 'rejected',
       }));
+
+      console.log('[Analyze] state.results count:', state.results.length);
+      if (state.results.length > 0) {
+        const first = state.results[0];
+        const fn = first.path.split('/').pop().split('\\').pop();
+        console.log('[Analyze] First result path:', first.path);
+        console.log('[Analyze] Extracted filename:', fn);
+        console.log('[Analyze] Image URL:', `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fn)}`);
+      }
+
+      // Если 0 результатов — показать ошибку
+      if (state.results.length === 0) {
+        progressText.textContent = 'Ошибка: анализ не вернул результатов';
+        progressFill.style.width = '0%';
+        $('#btnAnalyze').disabled = false;
+        return;
+      }
 
       // Показываем сводку
       showAnalysisSummary(analyzeRes);
