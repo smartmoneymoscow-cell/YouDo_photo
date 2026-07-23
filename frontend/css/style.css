@@ -40,6 +40,11 @@ body {
   z-index: 100;
 }
 
+.btn-header-export {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .logo {
   font-size: 20px;
   font-weight: 700;
@@ -507,8 +512,8 @@ body {
 .card-thumb-wrap {
   position: relative;
   width: 100%;
-  padding-top: 75%; /* 4:3 fallback */
-  aspect-ratio: 4/3;
+  padding-top: 100%; /* 1:1 квадрат */
+  aspect-ratio: 1;
   overflow: hidden;
   background: #0d0d1a;
 }
@@ -584,7 +589,7 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  width: 200px;
+  width: 150px;
 }
 
 .gallery-card:hover { border-color: var(--primary); transform: translateY(-2px); }
