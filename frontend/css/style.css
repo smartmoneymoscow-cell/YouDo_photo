@@ -40,10 +40,7 @@ body {
   z-index: 100;
 }
 
-.btn-header-export {
-  margin-left: auto;
-  white-space: nowrap;
-}
+
 
 .logo {
   font-size: 20px;
