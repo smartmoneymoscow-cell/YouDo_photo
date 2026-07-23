@@ -22,7 +22,7 @@
       threshold: 0.75,
       topK: 0,
       refMethod: 'max',
-      maxSide: 1024,
+      maxSide: 512,
     },
   };
 

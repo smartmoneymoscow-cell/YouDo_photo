@@ -106,7 +106,7 @@ def analyze_session(
     threshold=0.75,
     top_k=None,
     ref_method="max",
-    max_side=1024,
+    max_side=512,
 ):
     """Полный анализ: загрузка → эмбеддинги → сравнение → отбор."""
     from core.similarity import select_best, select_with_multi_reference

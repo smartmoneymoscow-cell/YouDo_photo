@@ -14,7 +14,7 @@ class AnalyzeRequest(BaseModel):
     threshold: float = Field(default=0.75, ge=0.0, le=1.0, description="Порог сходства")
     top_k: int | None = Field(default=None, description="Только top-K лучших")
     ref_method: str = Field(default="max", description="Метод сравнения: max/mean/weighted")
-    max_side: int = Field(default=1024, description="Макс. сторона при чтении")
+    max_side: int = Field(default=512, description="Макс. сторона при чтении")
 
 
 @router.post("/analyze/{session_id}")
