@@ -59,7 +59,7 @@
   $('#btnToStep2').addEventListener('click', () => goToStep(2));
   $('#btnBackTo1').addEventListener('click', () => goToStep(1));
   $('#btnBackTo2').addEventListener('click', () => goToStep(2));
-  $('#btnBackTo3').addEventListener('click', () => goToStep(2));
+  $('#btnBackTo3').addEventListener('click', () => goToStep(3));
   $('#btnToStep4').addEventListener('click', () => goToStep(4));
 
   // ═══ Dropzones ═══
