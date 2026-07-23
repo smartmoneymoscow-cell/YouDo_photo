@@ -106,6 +106,32 @@ async def upload_video(
     }
 
 
+# ─── Раздача загруженных файлов ───
+@app.get("/api/files/{session_id}/{folder}/{filename}")
+async def serve_file(session_id: str, folder: str, filename: str):
+    """Отдаёт загруженный файл (фото/эталон)."""
+    file_path = os.path.join(UPLOAD_DIR, session_id, folder, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(404, "Файл не найден")
+    from fastapi.responses import FileResponse
+    return FileResponse(file_path)
+
+
+# ─── Удаление фото из сессии ───
+@app.delete("/api/sessions/{session_id}/photos/{filename}")
+async def delete_photo(session_id: str, filename: str):
+    """Удаляет фото из сессии."""
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(404, "Сессия не найдена")
+    photo_path = os.path.join(session.photo_dir, filename)
+    if os.path.exists(photo_path):
+        os.remove(photo_path)
+    session.photo_files = [f for f in session.photo_files if not f.endswith(filename)]
+    session.results = [r for r in session.results if not r.get('path', '').endswith(filename)]
+    return {"deleted": filename}
+
+
 # ─── Health ───
 @app.get("/health")
 async def health():

@@ -201,23 +201,17 @@
         else progressText.textContent = 'AI-анализ: ранжирование кадров...';
       }, 500);
 
-      let analyzeRes;
-      try {
-        analyzeRes = await apiFetch(`/api/analyze/${state.sessionId}`, {
-          method: 'POST',
-          timeoutMs: 300000,
-          body: JSON.stringify({
-            model: state.params.model || null,
-            threshold: state.params.threshold,
-            top_k: state.params.topK || null,
-            ref_method: state.params.refMethod,
-            max_side: state.params.maxSide,
-          }),
-        });
-      } catch (fetchErr) {
-        console.error('Analyze fetch error:', fetchErr);
-        throw fetchErr;
-      }
+      const analyzeRes = await apiFetch(`/api/analyze/${state.sessionId}`, {
+        method: 'POST',
+        timeoutMs: 300000,
+        body: JSON.stringify({
+          model: state.params.model || null,
+          threshold: state.params.threshold,
+          top_k: state.params.topK || null,
+          ref_method: state.params.refMethod,
+          max_side: state.params.maxSide,
+        }),
+      });
 
       clearInterval(progressInterval);
       progressFill.style.width = '100%';
@@ -285,10 +279,12 @@
       const scoreClass = item.score >= 0.85 ? 'high' : item.score >= 0.65 ? 'mid' : 'low';
       const statusIcon = item.status === 'accepted' ? '✅' : '❌';
       const fileName = item.path.split('/').pop().split('\\').pop();
+      const imgUrl = `/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
 
       card.innerHTML = `
         <div class="card-score-bar ${scoreClass}">${scorePct}%</div>
-        <div class="card-placeholder">
+        <img class="card-thumb" src="${imgUrl}" alt="${fileName}" loading="lazy">
+        <div class="card-info">
           <span class="card-rank">#${item.rank}</span>
           <span class="card-fname">${fileName}</span>
         </div>
@@ -352,22 +348,47 @@
     viewerIndex = index;
     const item = state.results[index];
     const fileName = item.path.split('/').pop().split('\\').pop();
+    const imgUrl = `/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+    const refName = state.refFiles.length > 0 ? state.refFiles[0].name : 'эталон';
 
-    $('#viewerImage').innerHTML = `<div class="viewer-placeholder"><span class="viewer-rank">#${item.rank}</span><span>${fileName}</span></div>`;
+    // Фото
+    $('#viewerImage').innerHTML = `<img src="${imgUrl}" alt="${fileName}" style="max-width:100%;max-height:100%;object-fit:contain">`;
 
+    // Скор
     const scoreColor = item.score >= 0.85 ? 'var(--success)' : item.score >= 0.65 ? 'var(--warning)' : 'var(--danger)';
+    const scoreBar = item.score >= 0.85 ? '#4caf50' : item.score >= 0.65 ? '#ff9800' : '#f44336';
     $('#viewerScore').innerHTML = `
       <div style="font-size:48px;font-weight:700;color:${scoreColor}">${(item.score * 100).toFixed(1)}%</div>
       <div style="font-size:14px;color:var(--text-muted);margin-top:4px">сходство с эталоном</div>
+      <div style="margin-top:12px;background:#1a1a2e;border-radius:8px;overflow:hidden;height:8px">
+        <div style="width:${(item.score * 100).toFixed(0)}%;height:100%;background:${scoreBar};transition:width 0.3s"></div>
+      </div>
     `;
 
+    // Инфо + метрики
+    const diffPct = ((1 - item.score) * 100).toFixed(1);
+    const quality = item.score >= 0.85 ? 'Отличное' : item.score >= 0.65 ? 'Хорошее' : item.score >= 0.5 ? 'Среднее' : 'Низкое';
+    const qualityColor = item.score >= 0.85 ? '#4caf50' : item.score >= 0.65 ? '#ff9800' : '#f44336';
     $('#viewerInfo').innerHTML = `
-      <div style="font-size:13px;line-height:1.6">
+      <div style="font-size:14px;line-height:1.8">
         <div><b>Файл:</b> ${fileName}</div>
         <div><b>Ранг:</b> #${item.rank} из ${state.results.length}</div>
         <div><b>Статус:</b> ${item.status === 'accepted' ? '✅ Принят' : '❌ Отклонён'}</div>
+        <hr style="border-color:#333;margin:8px 0">
+        <div><b>Эталон:</b> ${refName}</div>
+        <div><b>Сходство:</b> <span style="color:${scoreColor}">${(item.score * 100).toFixed(1)}%</span></div>
+        <div><b>Разница:</b> <span style="color:#f44336">${diffPct}%</span></div>
+        <div><b>Качество:</b> <span style="color:${qualityColor}">${quality}</span></div>
+        <div><b>Модель:</b> ${state.results[0]?.model || 'auto'}</div>
       </div>
     `;
+
+    // Кнопки
+    const isAccepted = item.status === 'accepted';
+    $('#viewerAccept').textContent = isAccepted ? '✅ Принят' : '✅ Принять';
+    $('#viewerAccept').style.opacity = isAccepted ? '0.5' : '1';
+    $('#viewerReject').textContent = !isAccepted ? '❌ Отклонён' : '❌ Отклонить';
+    $('#viewerReject').style.opacity = !isAccepted ? '0.5' : '1';
 
     $('#fullscreenViewer').hidden = false;
     document.body.style.overflow = 'hidden';
@@ -384,6 +405,20 @@
   $('#viewerNext').addEventListener('click', () => { viewerIndex = Math.min(state.results.length - 1, viewerIndex + 1); openViewer(viewerIndex); });
   $('#viewerAccept').addEventListener('click', () => { state.results[viewerIndex].status = 'accepted'; viewerIndex < state.results.length - 1 ? openViewer(++viewerIndex) : closeViewer(); });
   $('#viewerReject').addEventListener('click', () => { state.results[viewerIndex].status = 'rejected'; viewerIndex < state.results.length - 1 ? openViewer(++viewerIndex) : closeViewer(); });
+  $('#viewerDelete').addEventListener('click', async () => {
+    const item = state.results[viewerIndex];
+    const fileName = item.path.split('/').pop().split('\\').pop();
+    if (!confirm(`Удалить ${fileName}?`)) return;
+    try {
+      await apiFetch(`/api/sessions/${state.sessionId}/photos/${encodeURIComponent(fileName)}`, { method: 'DELETE' });
+      state.results.splice(viewerIndex, 1);
+      if (state.results.length === 0) { closeViewer(); return; }
+      viewerIndex = Math.min(viewerIndex, state.results.length - 1);
+      openViewer(viewerIndex);
+    } catch (e) {
+      alert('Ошибка удаления: ' + e.message);
+    }
+  });
 
   document.addEventListener('keydown', (e) => {
     if ($('#fullscreenViewer').hidden) return;
@@ -480,20 +515,14 @@
     const timeoutMs = options.timeoutMs || 120000;
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const fetchOptions = { ...options };
-      delete fetchOptions.timeoutMs;
       const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json', ...fetchOptions.headers },
+        headers: { 'Content-Type': 'application/json', ...options.headers },
         signal: controller.signal,
-        ...fetchOptions,
+        ...options,
       });
       if (!res.ok) {
-        let errMsg = `HTTP ${res.status}`;
-        try {
-          const text = await res.text();
-          if (text) errMsg = text;
-        } catch (e) {}
-        throw new Error(errMsg);
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
       }
       return res.json();
     } finally {
