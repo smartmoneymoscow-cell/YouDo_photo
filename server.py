@@ -121,12 +121,14 @@ def image_to_histogram_vector(path: str, bins: int = 64) -> np.ndarray:
     Работает без torch — только numpy + PIL.
     Это ДЕМО-режим. Для продакшена нужен OpenCLIP/DINOv2.
     """
-    from PIL import Image
+    from PIL import Image, UnidentifiedImageError
 
     try:
-        img = Image.open(path).convert('RGB')
-    except Exception:
-        # Для RAW файлов — заглушка (имя файла → хеш)
+        img = Image.open(path)
+        img.load()  # Force read pixel data
+        img = img.convert('RGB')
+    except (UnidentifiedImageError, OSError, Exception) as e:
+        # Для RAW/CR3 файлов — заглушка (имя файла → хеш)
         h = hash(Path(path).name) % 10000
         rng = np.random.RandomState(h)
         return rng.randn(192).astype(np.float32)
@@ -336,12 +338,17 @@ async def api_analyze(session_id: str, req: AnalyzeRequest):
     if not session.photo_files:
         raise HTTPException(400, "Нет фотографий")
 
-    result = analyze_photos(
-        ref_dir=session.ref_dir,
-        photo_dir=session.photo_dir,
-        threshold=req.threshold,
-        top_k=req.top_k if req.top_k else 0,
-    )
+    try:
+        result = analyze_photos(
+            ref_dir=session.ref_dir,
+            photo_dir=session.photo_dir,
+            threshold=req.threshold,
+            top_k=req.top_k if req.top_k else 0,
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Analysis error: {str(e)}")
 
     if result.get("status") == "error":
         raise HTTPException(400, result["error"])
