@@ -21,12 +21,12 @@ RUN pip install --no-cache-dir \
     open-clip-torch psutil
 
 COPY core/ core/
-COPY backend/app/ backend/app/
+COPY backend/ backend/
 COPY frontend/ frontend/
 
 RUN mkdir -p uploads
+RUN chmod +x backend/entrypoint.sh 2>/dev/null || true
 
 EXPOSE 8000
 
-# Without --preload (avoids startup memory spike)
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
