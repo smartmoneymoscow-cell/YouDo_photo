@@ -27,11 +27,11 @@ COPY frontend/ frontend/
 
 RUN mkdir -p uploads
 
-# Pre-download ResNet50 weights (~100MB, fits in 512MB free tier)
+# Pre-download MobileNetV3-Small weights (~6MB, ultra-light for free tier)
 RUN python -c "\
-from torchvision.models import resnet50, ResNet50_Weights; \
-model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2); \
-print('ResNet50 cached OK'); \
+from torchvision.models import mobilenet_v3_small, MobileNet_V3_Small_Weights; \
+model = mobilenet_v3_small(weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1); \
+print('MobileNetV3 cached OK'); \
 del model"
 
 EXPOSE 8000

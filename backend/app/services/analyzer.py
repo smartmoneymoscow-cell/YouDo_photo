@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
 _model_cache = {}
-MODEL_FALLBACK = ["clip_vit_b32", "resnet50"]
+MODEL_FALLBACK = ["mobilenet_v3", "resnet50"]
 
 
 def get_available_ram_mb():
@@ -32,8 +32,8 @@ def pick_model(requested=None):
     if available >= 2000:
         return requested or "clip_vit_b32"
     if available >= 800:
-        return requested if requested in ("clip_vit_b32", "resnet50") else "clip_vit_b32"
-    return "resnet50"
+        return requested if requested in ("clip_vit_b32", "mobilenet_v3", "resnet50") else "clip_vit_b32"
+    return "mobilenet_v3"
 
 
 def get_extractor(model_name=None, device=None):

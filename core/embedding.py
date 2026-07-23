@@ -35,6 +35,11 @@ CLIP_TRANSFORM = transforms.Compose([
 
 # ─── Реестр моделей ───
 MODEL_REGISTRY = {
+    "mobilenet_v3": {
+        "dim": 576,
+        "transform": "imagenet",
+        "description": "MobileNetV3-Small — ultra-light (6MB, для free tier)",
+    },
     "resnet50": {
         "dim": 2048,
         "transform": "imagenet",
@@ -77,7 +82,9 @@ class EmbeddingExtractor:
         self._setup(model_name)
 
     def _setup(self, model_name: str):
-        if model_name == "resnet50":
+        if model_name == "mobilenet_v3":
+            self._setup_mobilenet_v3()
+        elif model_name == "resnet50":
             self._setup_resnet50()
         elif model_name == "clip_vit_b32":
             self._setup_clip_vit_b32()
@@ -90,6 +97,19 @@ class EmbeddingExtractor:
                 f"Неизвестная модель: {model_name}. "
                 f"Доступные: {list(MODEL_REGISTRY.keys())}"
             )
+
+    def _setup_mobilenet_v3(self):
+        from torchvision.models import mobilenet_v3_small, MobileNet_V3_Small_Weights
+        weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1
+        model = mobilenet_v3_small(weights=weights)
+        # Remove classifier, keep features + avgpool
+        self.model = nn.Sequential(
+            model.features,
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+        )
+        self.model.eval().to(self.device)
+        self.transform = IMAGENET_TRANSFORM
 
     def _setup_resnet50(self):
         from torchvision.models import resnet50, ResNet50_Weights
