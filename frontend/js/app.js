@@ -290,6 +290,10 @@
     }
   }
 
+  function showFallback(wrapEl, name) {
+    wrapEl.innerHTML = `<div class="card-thumb-fallback"><span class="fallback-icon">📸</span><span class="fallback-name">${name}</span><span class="fallback-hint">RAW/CR3 — превью недоступно</span></div>`;
+  }
+
   // ═══ Галерея ═══
   function renderGallery(filter = 'all') {
     const gallery = $('#gallery');
@@ -327,13 +331,8 @@
 
       card.innerHTML = `
         <div class="card-score-bar ${scoreClass}">${scorePct}%</div>
-        <div class="card-thumb-wrap">
-          <img class="card-thumb" src="${imgUrl}" alt="${fileName}" loading="lazy"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-          <div class="card-thumb-fallback" style="display:none">
-            <span class="fallback-icon">🖼️</span>
-            <span class="fallback-name">${fileName}</span>
-          </div>
+        <div class="card-thumb-wrap" id="wrap-${realIdx}">
+          <div class="card-thumb-loading">⏳</div>
         </div>
         <div class="card-info">
           <span class="card-rank">#${item.rank}</span>
@@ -341,6 +340,25 @@
         </div>
         <button class="card-toggle" data-idx="${realIdx}" title="Принять/Отклонить">${statusIcon}</button>
       `;
+
+      // Загрузка изображения с проверкой
+      (function(wrapEl, url, name) {
+        const img = new Image();
+        img.className = 'card-thumb';
+        img.alt = name;
+        img.onload = function() {
+          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+            wrapEl.innerHTML = '';
+            wrapEl.appendChild(img);
+          } else {
+            showFallback(wrapEl, name);
+          }
+        };
+        img.onerror = function() {
+          showFallback(wrapEl, name);
+        };
+        img.src = url;
+      })(card.querySelector('.card-thumb-wrap'), imgUrl, fileName);
 
       card.addEventListener('click', (e) => {
         if (e.target.closest('.card-toggle')) {
@@ -402,9 +420,24 @@
     const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
     const refName = state.refFiles.length > 0 ? state.refFiles[0].name : 'эталон';
 
-    // Фото
-    $('#viewerImage').innerHTML = `<img src="${imgUrl}" alt="${fileName}" style="max-width:100%;max-height:100%;object-fit:contain"
-      onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:48px;text-align:center;color:var(--text-muted)\'>🖼️<br>Изображение не загрузилось<br><small>${fileName}</small></div>'">`;
+    // Фото — с проверкой загрузки
+    const viewerImgEl = $('#viewerImage');
+    viewerImgEl.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-muted)">⏳ Загрузка...</div>';
+    const vImg = new Image();
+    vImg.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
+    vImg.alt = fileName;
+    vImg.onload = function() {
+      if (vImg.naturalWidth > 0) {
+        viewerImgEl.innerHTML = '';
+        viewerImgEl.appendChild(vImg);
+      } else {
+        viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>RAW/CR3 файл — превью недоступно в браузере<br><small>Файл будет конвертирован при экспорте</small></div>`;
+      }
+    };
+    vImg.onerror = function() {
+      viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>RAW/CR3 файл — превью недоступно в браузере<br><small>Файл будет конвертирован при экспорте</small></div>`;
+    };
+    vImg.src = imgUrl;
 
     // Скор
     const scoreColor = item.score >= 0.85 ? 'var(--success)' : item.score >= 0.65 ? 'var(--warning)' : 'var(--danger)';
