@@ -1,7 +1,6 @@
 """Сервис: AI-анализ фотографий по эмбеддингам.
 
-Memory-optimized: lazy imports of heavy modules (torch, numpy, etc.)
-Only loaded when /api/analyze is actually called.
+Memory-optimized: lazy imports, one-image-at-a-time processing.
 """
 
 import os
@@ -11,19 +10,14 @@ import time
 from pathlib import Path
 from dataclasses import asdict
 
-# Добавляем корень проекта в путь для импорта core
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
-# Глобальный кэш моделей
 _model_cache = {}
-
-# Порядок fallback
 MODEL_FALLBACK = ["clip_vit_b32", "resnet50"]
 
 
-def get_available_ram_mb() -> float:
-    """Возвращает доступную RAM в MB."""
+def get_available_ram_mb():
     try:
         import psutil
         return psutil.virtual_memory().available / (1024 * 1024)
@@ -32,7 +26,6 @@ def get_available_ram_mb() -> float:
 
 
 def pick_model(requested=None):
-    """Выбирает модель с учётом доступной RAM."""
     available = get_available_ram_mb()
     if requested and requested in _model_cache:
         return requested
@@ -44,7 +37,6 @@ def pick_model(requested=None):
 
 
 def get_extractor(model_name=None, device=None):
-    """Получает или создаёт экстрактор эмбеддингов (с кэшированием и fallback)."""
     from core.embedding import EmbeddingExtractor
 
     model_name = pick_model(model_name or "clip_vit_b32")
@@ -59,34 +51,17 @@ def get_extractor(model_name=None, device=None):
                 if fallback == model_name:
                     continue
                 try:
-                    print(f"   → Пробуем fallback: {fallback}")
                     _model_cache[fallback] = EmbeddingExtractor(model_name=fallback, device="cpu")
                     model_name = fallback
                     break
                 except Exception:
                     continue
             else:
-                raise RuntimeError(
-                    f"Не удалось загрузить модель. Доступная RAM: {get_available_ram_mb():.0f} MB."
-                )
+                raise RuntimeError(f"Не удалось загрузить модель. RAM: {get_available_ram_mb():.0f} MB.")
     return _model_cache[model_name]
 
 
-def load_images(paths, max_side=1024):
-    """Загружает изображения."""
-    from core.raw_reader import read_any
-    images, valid = [], []
-    for p in paths:
-        try:
-            images.append(read_any(p, max_side=max_side))
-            valid.append(p)
-        except Exception as e:
-            print(f"  ✗ {Path(p).name}: {e}")
-    return images, valid
-
-
 def find_photos(directory):
-    """Находит все RAW и изображения в директории."""
     from core.raw_reader import RAW_EXTENSIONS, IMAGE_EXTENSIONS
     all_ext = RAW_EXTENSIONS | IMAGE_EXTENSIONS
     files = []
@@ -95,6 +70,32 @@ def find_photos(directory):
             if Path(f).suffix.lower() in all_ext:
                 files.append(os.path.join(root, f))
     return files
+
+
+def extract_embeddings_one_by_one(paths, extractor, max_side=1024):
+    """Extract embeddings one image at a time to minimize RAM usage."""
+    from core.raw_reader import read_any
+    import numpy as np
+
+    embeddings = []
+    valid_paths = []
+
+    for i, p in enumerate(paths):
+        try:
+            img = read_any(p, max_side=max_side)
+            emb = extractor.extract(img)
+            embeddings.append(emb)
+            valid_paths.append(p)
+            # Free image memory immediately
+            del img
+            if (i + 1) % 5 == 0:
+                gc.collect()
+        except Exception as e:
+            print(f"  ✗ {Path(p).name}: {e}")
+
+    if not embeddings:
+        return np.array([]), []
+    return np.stack(embeddings).astype(np.float32), valid_paths
 
 
 def analyze_session(
@@ -108,9 +109,7 @@ def analyze_session(
     max_side=1024,
 ):
     """Полный анализ: загрузка → эмбеддинги → сравнение → отбор."""
-    from core.similarity import (
-        select_best, select_with_multi_reference,
-    )
+    from core.similarity import select_best, select_with_multi_reference
 
     t0 = time.time()
 
@@ -127,21 +126,19 @@ def analyze_session(
 
     extractor = get_extractor(model_name)
 
-    ref_images, valid_ref = load_images(ref_paths, max_side)
-    photo_images, valid_photos = load_images(photo_paths, max_side)
-
-    if not ref_images:
-        return {"error": "Не удалось загрузить эталоны", "status": "error"}
-    if not photo_images:
-        return {"error": "Не удалось загрузить фотографии", "status": "error"}
-
-    import numpy as np
-    ref_embeddings = extractor.extract_batch(ref_images)
-    photo_embeddings = extractor.extract_batch(photo_images)
-
-    del ref_images, photo_images
+    # Process one image at a time (memory-efficient)
+    ref_embeddings, valid_ref = extract_embeddings_one_by_one(ref_paths, extractor, max_side)
     gc.collect()
 
+    photo_embeddings, valid_photos = extract_embeddings_one_by_one(photo_paths, extractor, max_side)
+    gc.collect()
+
+    if len(valid_ref) == 0:
+        return {"error": "Не удалось загрузить эталоны", "status": "error"}
+    if len(valid_photos) == 0:
+        return {"error": "Не удалось загрузить фотографии", "status": "error"}
+
+    # Comparison (numpy only, lightweight)
     if len(ref_embeddings) > 1:
         results = select_with_multi_reference(
             valid_photos, photo_embeddings, ref_embeddings,
@@ -152,6 +149,9 @@ def analyze_session(
             valid_photos, photo_embeddings, ref_embeddings[0],
             threshold=threshold, top_k=top_k,
         )
+
+    del ref_embeddings, photo_embeddings
+    gc.collect()
 
     accepted = [r for r in results if r.accepted]
     rejected = [r for r in results if not r.accepted]
