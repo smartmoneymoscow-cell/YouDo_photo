@@ -325,15 +325,24 @@
       const scoreClass = item.score >= 0.85 ? 'high' : item.score >= 0.65 ? 'mid' : 'low';
       const statusIcon = item.status === 'accepted' ? '✅' : '❌';
       const fileName = item.path.split('/').pop().split('\\').pop();
+      const fileExt = fileName.split('.').pop().toLowerCase();
       const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+      const browserSupported = ['jpg','jpeg','png','gif','webp','svg','bmp'];
 
-      console.log('[Gallery] #%d img=%s', item.rank, imgUrl);
+      console.log('[Gallery] #%d img=%s ext=%s', item.rank, imgUrl, fileExt);
+
+      let thumbHtml;
+      if (browserSupported.includes(fileExt)) {
+        // Браузер может показать — грузим
+        thumbHtml = `<div class="card-thumb-wrap" id="wrap-${realIdx}"><div class="card-thumb-loading">⏳</div></div>`;
+      } else {
+        // RAW/CR3/NEF и т.д. — сразу показываем заглушку
+        thumbHtml = `<div class="card-thumb-wrap"><div class="card-thumb-fallback"><span class="fallback-icon">📸</span><span class="fallback-name">${fileName}</span><span class="fallback-hint">${fileExt.toUpperCase()} — превью недоступно</span></div></div>`;
+      }
 
       card.innerHTML = `
         <div class="card-score-bar ${scoreClass}">${scorePct}%</div>
-        <div class="card-thumb-wrap" id="wrap-${realIdx}">
-          <div class="card-thumb-loading">⏳</div>
-        </div>
+        ${thumbHtml}
         <div class="card-info">
           <span class="card-rank">#${item.rank}</span>
           <span class="card-fname">${fileName}</span>
@@ -341,24 +350,26 @@
         <button class="card-toggle" data-idx="${realIdx}" title="Принять/Отклонить">${statusIcon}</button>
       `;
 
-      // Загрузка изображения с проверкой
-      (function(wrapEl, url, name) {
-        const img = new Image();
-        img.className = 'card-thumb';
-        img.alt = name;
-        img.onload = function() {
-          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-            wrapEl.innerHTML = '';
-            wrapEl.appendChild(img);
-          } else {
+      // Загрузка только для поддерживаемых форматов
+      if (browserSupported.includes(fileExt)) {
+        (function(wrapEl, url, name) {
+          const img = new Image();
+          img.className = 'card-thumb';
+          img.alt = name;
+          img.onload = function() {
+            if (img.naturalWidth > 0) {
+              wrapEl.innerHTML = '';
+              wrapEl.appendChild(img);
+            } else {
+              showFallback(wrapEl, name);
+            }
+          };
+          img.onerror = function() {
             showFallback(wrapEl, name);
-          }
-        };
-        img.onerror = function() {
-          showFallback(wrapEl, name);
-        };
-        img.src = url;
-      })(card.querySelector('.card-thumb-wrap'), imgUrl, fileName);
+          };
+          img.src = url;
+        })(card.querySelector('.card-thumb-wrap'), imgUrl, fileName);
+      }
 
       card.addEventListener('click', (e) => {
         if (e.target.closest('.card-toggle')) {
@@ -420,24 +431,28 @@
     const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
     const refName = state.refFiles.length > 0 ? state.refFiles[0].name : 'эталон';
 
-    // Фото — с проверкой загрузки
+    // Фото — с проверкой формата
     const viewerImgEl = $('#viewerImage');
-    viewerImgEl.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-muted)">⏳ Загрузка...</div>';
-    const vImg = new Image();
-    vImg.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
-    vImg.alt = fileName;
-    vImg.onload = function() {
-      if (vImg.naturalWidth > 0) {
+    const vExt = fileName.split('.').pop().toLowerCase();
+    const vSupported = ['jpg','jpeg','png','gif','webp','svg','bmp'];
+
+    if (!vSupported.includes(vExt)) {
+      // RAW файл — сразу заглушка
+      viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>${vExt.toUpperCase()} — превью недоступно в браузере<br><small>Файл будет конвертирован при экспорте</small></div>`;
+    } else {
+      viewerImgEl.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-muted)">⏳ Загрузка...</div>';
+      const vImg = new Image();
+      vImg.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
+      vImg.alt = fileName;
+      vImg.onload = function() {
         viewerImgEl.innerHTML = '';
         viewerImgEl.appendChild(vImg);
-      } else {
-        viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>RAW/CR3 файл — превью недоступно в браузере<br><small>Файл будет конвертирован при экспорте</small></div>`;
-      }
-    };
-    vImg.onerror = function() {
-      viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>RAW/CR3 файл — превью недоступно в браузере<br><small>Файл будет конвертирован при экспорте</small></div>`;
-    };
-    vImg.src = imgUrl;
+      };
+      vImg.onerror = function() {
+        viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>Не удалось загрузить изображение</div>`;
+      };
+      vImg.src = imgUrl;
+    }
 
     // Скор
     const scoreColor = item.score >= 0.85 ? 'var(--success)' : item.score >= 0.65 ? 'var(--warning)' : 'var(--danger)';
