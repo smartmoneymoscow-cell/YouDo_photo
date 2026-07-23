@@ -279,6 +279,8 @@
       ? state.results
       : state.results.filter(r => r.status === filter);
 
+    console.log('[Gallery] filter=%s, total=%d, filtered=%d, sessionId=%s', filter, state.results.length, filtered.length, state.sessionId);
+
     if (filtered.length === 0) {
       const acceptedCount = state.results.filter(r => r.status === 'accepted').length;
       let hint = '';
@@ -292,22 +294,32 @@
     filtered.forEach((item, idx) => {
       const card = document.createElement('div');
       card.className = `gallery-card ${item.status}`;
-      card.dataset.index = state.results.indexOf(item);
+      const realIdx = state.results.indexOf(item);
+      card.dataset.index = realIdx;
 
       const scorePct = (item.score * 100).toFixed(1);
       const scoreClass = item.score >= 0.85 ? 'high' : item.score >= 0.65 ? 'mid' : 'low';
       const statusIcon = item.status === 'accepted' ? '✅' : '❌';
       const fileName = item.path.split('/').pop().split('\\').pop();
-      const imgUrl = `/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+      const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+
+      console.log('[Gallery] #%d img=%s', item.rank, imgUrl);
 
       card.innerHTML = `
         <div class="card-score-bar ${scoreClass}">${scorePct}%</div>
-        <img class="card-thumb" src="${imgUrl}" alt="${fileName}" loading="lazy">
+        <div class="card-thumb-wrap">
+          <img class="card-thumb" src="${imgUrl}" alt="${fileName}" loading="lazy"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+          <div class="card-thumb-fallback" style="display:none">
+            <span class="fallback-icon">🖼️</span>
+            <span class="fallback-name">${fileName}</span>
+          </div>
+        </div>
         <div class="card-info">
           <span class="card-rank">#${item.rank}</span>
           <span class="card-fname">${fileName}</span>
         </div>
-        <button class="card-toggle" data-idx="${state.results.indexOf(item)}" title="Принять/Отклонить">${statusIcon}</button>
+        <button class="card-toggle" data-idx="${realIdx}" title="Принять/Отклонить">${statusIcon}</button>
       `;
 
       card.addEventListener('click', (e) => {
@@ -317,7 +329,7 @@
           renderGallery(getCurrentFilter());
           return;
         }
-        openViewer(parseInt(card.dataset.index));
+        openViewer(realIdx);
       });
 
       gallery.appendChild(card);
@@ -367,11 +379,12 @@
     viewerIndex = index;
     const item = state.results[index];
     const fileName = item.path.split('/').pop().split('\\').pop();
-    const imgUrl = `/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+    const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
     const refName = state.refFiles.length > 0 ? state.refFiles[0].name : 'эталон';
 
     // Фото
-    $('#viewerImage').innerHTML = `<img src="${imgUrl}" alt="${fileName}" style="max-width:100%;max-height:100%;object-fit:contain">`;
+    $('#viewerImage').innerHTML = `<img src="${imgUrl}" alt="${fileName}" style="max-width:100%;max-height:100%;object-fit:contain"
+      onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:48px;text-align:center;color:var(--text-muted)\'>🖼️<br>Изображение не загрузилось<br><small>${fileName}</small></div>'">`;
 
     // Скор
     const scoreColor = item.score >= 0.85 ? 'var(--success)' : item.score >= 0.65 ? 'var(--warning)' : 'var(--danger)';
