@@ -6,8 +6,8 @@ import shutil
 from pathlib import Path
 from dataclasses import dataclass, field
 
-# Директория для загрузок
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
+# Директория для загрузок (backend/app/services → backend → project root → uploads)
+UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "uploads"))
 
 
 @dataclass

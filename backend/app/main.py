@@ -12,8 +12,10 @@ from app.routes import upload, analyze, export
 from app.services.session import get_session
 
 # ─── Конфиг ───
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+# From backend/app/main.py → go up 3 levels to reach project root
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+UPLOAD_DIR = os.path.join(PROJECT_ROOT, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 VID_EXT = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.wmv', '.flv', '.3gp'}

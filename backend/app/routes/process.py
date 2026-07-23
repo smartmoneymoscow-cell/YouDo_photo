@@ -14,7 +14,7 @@ import cv2
 import io
 import zipfile
 
-router = APIRouter(prefix="/api/process", tags=["process"])
+router = APIRouter(prefix="/process", tags=["process"])
 
 
 class ColorParams(BaseModel):

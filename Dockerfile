@@ -1,28 +1,35 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
-# Системные зависимости: ffmpeg для видео, libgl для OpenCV
+# System deps: ffmpeg for video, libraw for RAW conversion
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg libgl1-mesa-glx libglib2.0-0 && \
-    rm -rf /var/lib/apt/lists/*
+    ffmpeg \
+    libraw-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Копируем core (AI-модели)
+# Copy requirements first (layer cache)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy core (AI models)
 COPY core/ core/
 
-# Копируем backend
-COPY backend/app/ app/
-COPY backend/requirements.txt requirements.txt
+# Copy backend app
+COPY backend/app/ backend/app/
 
-# Копируем фронтенд
+# Copy frontend
 COPY frontend/ frontend/
 
-# Создаём директорию для загрузок
-RUN mkdir -p uploads
+# Pre-download default model weights (OpenCLIP ViT-L/14)
+RUN python -c "\
+import open_clip; \
+model, _, preprocess = open_clip.create_model_and_transforms('ViT-L-14', pretrained='laion2b_s32b_b82k'); \
+print('Model cached OK')"
 
-# Устанавливаем зависимости (включая torch)
-RUN pip install --no-cache-dir -r requirements.txt
+# Create uploads directory
+RUN mkdir -p uploads
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

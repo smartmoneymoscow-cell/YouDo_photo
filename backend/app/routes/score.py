@@ -5,7 +5,7 @@ from app.utils.score import score_image
 from app.utils.raw_convert import raw_to_rgb, raw_to_thumbnail
 import numpy as np
 
-router = APIRouter(prefix="/api/score", tags=["score"])
+router = APIRouter(prefix="/score", tags=["score"])
 
 
 @router.post("/")

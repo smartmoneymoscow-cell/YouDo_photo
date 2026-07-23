@@ -1,11 +1,9 @@
 services:
   - type: web
-    name: youdo-photo
+    name: youdo-photo-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
-    region: frankfurt
+    plan: starter
     envVars:
       - key: PYTHON_VERSION
-        value: "3.12"
-    healthCheckPath: /health
+        value: "3.11"
