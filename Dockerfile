@@ -11,7 +11,7 @@ ENV MKL_NUM_THREADS=1
 ENV OPENBLAS_NUM_THREADS=1
 ENV PYTHONUNBUFFERED=1
 
-# Install torch CPU-only
+# Install torch CPU-only first
 RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install the rest from PyPI
@@ -28,4 +28,5 @@ RUN mkdir -p uploads
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--preload", "--workers", "1"]
+# Without --preload (avoids startup memory spike)
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
