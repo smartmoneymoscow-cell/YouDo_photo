@@ -203,6 +203,7 @@
 
       const analyzeRes = await apiFetch(`/api/analyze/${state.sessionId}`, {
         method: 'POST',
+        timeoutMs: 300000,
         body: JSON.stringify({
           model: state.params.model,
           threshold: state.params.threshold,
@@ -232,7 +233,9 @@
       }, 1500);
 
     } catch (err) {
-      progressText.textContent = `Ошибка: ${err.message}`;
+      clearInterval(progressInterval);
+      const msg = err.name === 'AbortError' ? 'Превышен таймаут (5 мин). Уменьшите количество файлов.' : err.message;
+      progressText.textContent = `Ошибка: ${msg}`;
       progressFill.style.width = '0%';
       $('#btnAnalyze').disabled = false;
       console.error(err);
@@ -467,15 +470,23 @@
 
   async function apiFetch(path, options = {}) {
     const url = API_BASE + path;
-    const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
-      ...options,
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `HTTP ${res.status}`);
+    const controller = new AbortController();
+    const timeoutMs = options.timeoutMs || 120000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...options.headers },
+        signal: controller.signal,
+        ...options,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      return res.json();
+    } finally {
+      clearTimeout(timer);
     }
-    return res.json();
   }
 
   async function uploadFiles(path, files) {
@@ -490,9 +501,15 @@
     const formData = new FormData();
     for (const f of files) formData.append('files', f);
     const url = `${API_BASE + path}?fps=${fps}&max_frames=${maxFrames}`;
-    const res = await fetch(url, { method: 'POST', body: formData });
-    if (!res.ok) throw new Error(`Video upload failed: ${res.status}`);
-    return res.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 300000);
+    try {
+      const res = await fetch(url, { method: 'POST', body: formData, signal: controller.signal });
+      if (!res.ok) throw new Error(`Video upload failed: ${res.status}`);
+      return res.json();
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
 })();
