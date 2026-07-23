@@ -1,8 +1,14 @@
-"""Сервис: AI-анализ фотографий по эмбеддингам."""
+"""Сервис: AI-анализ фотографий по эмбеддингам.
+
+Memory-optimized: uses CLIP ViT-B/32 by default (fits in 512MB RAM).
+Falls back to ResNet50 if OOM. Switches to ViT-L/14 when RAM >= 2GB.
+"""
 
 import os
 import sys
+import gc
 import time
+import psutil
 from pathlib import Path
 from dataclasses import asdict
 
@@ -21,11 +27,69 @@ from core.similarity import (
 # Глобальный кэш моделей (чтобы не загружать каждый раз)
 _model_cache: dict[str, EmbeddingExtractor] = {}
 
+# Порядок fallback: от лучшего к лёгкому
+MODEL_FALLBACK = [
+    "clip_vit_b32",       # ~400MB RAM, отличное качество
+    "resnet50",           # ~250MB RAM, базовое качество
+]
 
-def get_extractor(model_name: str = "openclip_vit_l14", device: str = None) -> EmbeddingExtractor:
-    """Получает или создаёт экстрактор эмбеддингов (с кэшированием)."""
+
+def get_available_ram_mb() -> float:
+    """Возвращает доступную RAM в MB."""
+    try:
+        return psutil.virtual_memory().available / (1024 * 1024)
+    except Exception:
+        return 512  # assume minimal
+
+
+def pick_model(requested: str = None) -> str:
+    """Выбирает модель с учётом доступной RAM."""
+    available = get_available_ram_mb()
+
+    # Если модель уже загружена — используем её
+    if requested and requested in _model_cache:
+        return requested
+
+    # Если >= 2GB — можно ViT-L/14
+    if available >= 2000:
+        return requested or "openclip_vit_l14"
+
+    # Если 800MB–2GB — ViT-B/32
+    if available >= 800:
+        return requested if requested in ("clip_vit_b32", "resnet50") else "clip_vit_b32"
+
+    # Если < 800MB — только ResNet50
+    return "resnet50"
+
+
+def get_extractor(model_name: str = None, device: str = None) -> EmbeddingExtractor:
+    """Получает или создаёт экстрактор эмбеддингов (с кэшированием и fallback)."""
+    model_name = pick_model(model_name or "clip_vit_b32")
+
     if model_name not in _model_cache:
-        _model_cache[model_name] = EmbeddingExtractor(model_name=model_name, device=device)
+        try:
+            _model_cache[model_name] = EmbeddingExtractor(model_name=model_name, device=device)
+        except (RuntimeError, MemoryError) as e:
+            print(f"⚠️  OOM при загрузке {model_name}: {e}")
+            gc.collect()
+            # Fallback
+            for fallback in MODEL_FALLBACK:
+                if fallback == model_name:
+                    continue
+                try:
+                    print(f"   → Пробуем fallback: {fallback}")
+                    _model_cache[fallback] = EmbeddingExtractor(model_name=fallback, device="cpu")
+                    model_name = fallback
+                    break
+                except Exception:
+                    continue
+            else:
+                raise RuntimeError(
+                    "Не удалось загрузить ни одну модель. "
+                    f"Доступная RAM: {get_available_ram_mb():.0f} MB. "
+                    "Минимум нужно ~300 MB."
+                )
+
     return _model_cache[model_name]
 
 
@@ -58,7 +122,7 @@ def analyze_session(
     session_id: str,
     ref_dir: str,
     photo_dir: str,
-    model_name: str = "openclip_vit_l14",
+    model_name: str = None,
     threshold: float = 0.75,
     top_k: int = None,
     ref_method: str = "max",
@@ -99,6 +163,10 @@ def analyze_session(
     ref_embeddings = extractor.extract_batch(ref_images)
     photo_embeddings = extractor.extract_batch(photo_images)
 
+    # Освобождаем память от загруженных изображений
+    del ref_images, photo_images
+    gc.collect()
+
     # 3. Сравнение
     if len(ref_embeddings) > 1:
         results = select_with_multi_reference(
@@ -121,7 +189,7 @@ def analyze_session(
         "status": "ok",
         "session_id": session_id,
         "elapsed_sec": round(elapsed, 1),
-        "model": model_name,
+        "model": extractor.model_name,
         "model_dim": extractor.dim,
         "threshold": threshold,
         "total": len(results),

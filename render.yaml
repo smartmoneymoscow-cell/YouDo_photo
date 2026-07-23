@@ -3,7 +3,13 @@ services:
     name: youdo-photo-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter
+    plan: free
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"

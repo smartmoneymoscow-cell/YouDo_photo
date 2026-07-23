@@ -10,7 +10,11 @@ numpy>=1.24.0
 opencv-python-headless>=4.8.0
 Pillow>=10.0.0
 
-# Core: AI models
+# Core: AI models (CPU-only to save ~400MB RAM)
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0
 torchvision>=0.15.0
 open-clip-torch>=2.20.0
+
+# Memory monitoring
+psutil>=5.9.0

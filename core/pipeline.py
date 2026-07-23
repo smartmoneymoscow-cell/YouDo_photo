@@ -34,7 +34,7 @@ class PhotoSelector:
 
     def __init__(
         self,
-        model_name: str = "openclip_vit_l14",
+        model_name: str = "clip_vit_b32",
         device: str = None,
         max_side: int = 1024,
         raw_engine: str = "auto",

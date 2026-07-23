@@ -61,7 +61,7 @@ MODEL_REGISTRY = {
 class EmbeddingExtractor:
     """Извлекает векторные описания (эмбеддинги) из изображений."""
 
-    def __init__(self, model_name: str = "openclip_vit_l14", device: str = None):
+    def __init__(self, model_name: str = "clip_vit_b32", device: str = None):
         """
         Args:
             model_name: имя модели из MODEL_REGISTRY
@@ -100,11 +100,16 @@ class EmbeddingExtractor:
         self.transform = IMAGENET_TRANSFORM
 
     def _setup_clip_vit_b32(self):
-        import clip
-        model, _ = clip.load("ViT-B/32", device=self.device)
+        try:
+            import open_clip
+        except ImportError:
+            raise ImportError("pip install open-clip-torch")
+        model, _, preprocess = open_clip.create_model_and_transforms(
+            "ViT-B-32", pretrained="laion2b_s347b_k799e"
+        )
         self.model = model.visual
         self.model.eval().to(self.device)
-        self.transform = CLIP_TRANSFORM
+        self.transform = preprocess
 
     def _setup_openclip_vit_l14(self):
         try:
