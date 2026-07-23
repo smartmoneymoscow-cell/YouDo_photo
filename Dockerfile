@@ -16,6 +16,13 @@ ENV PYTHONUNBUFFERED=1
 
 # Copy requirements first (layer cache)
 COPY requirements.txt .
+
+# Install torch CPU-only first (saves ~400MB vs CUDA version)
+RUN pip install --no-cache-dir \
+    torch torchvision \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining deps
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy core (AI models)
