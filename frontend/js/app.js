@@ -252,10 +252,10 @@
       // Показываем сводку
       showAnalysisSummary(analyzeRes);
 
-      // Переход на шаг 3 через 1.5 сек
+      // Переход сразу на шаг 4 (экспорт) через 1.5 сек — пропускаем модерацию
       setTimeout(() => {
         progressEl.hidden = true;
-        goToStep(3);
+        goToStep(4);
       }, 1500);
 
     } catch (err) {
@@ -269,7 +269,7 @@
   });
 
   function showAnalysisSummary(data) {
-    const el = $('#analysisSummary');
+    const el = $('#analysisSummaryExport') || $('#analysisSummary');
     el.innerHTML = `
       <div class="summary-card">
         <div class="summary-stat"><span class="stat-num">${data.total}</span><span class="stat-label">всего</span></div>
@@ -538,9 +538,22 @@
 
     accepted.forEach(item => {
       const fileName = item.path.split('/').pop().split('\\').pop();
+      const fileExt = fileName.split('.').pop().toLowerCase();
+      const browserSupported = ['jpg','jpeg','png','gif','webp','svg','bmp'];
+      const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+
       const card = document.createElement('div');
       card.className = 'export-preview-card';
+
+      let thumbHtml;
+      if (browserSupported.includes(fileExt)) {
+        thumbHtml = `<img class="export-card-thumb" src="${imgUrl}" alt="${fileName}" onerror="this.style.display='none'">`;
+      } else {
+        thumbHtml = `<div class="export-card-thumb-placeholder">📸 ${fileExt.toUpperCase()}</div>`;
+      }
+
       card.innerHTML = `
+        ${thumbHtml}
         <div class="export-card-score">${(item.score * 100).toFixed(1)}%</div>
         <div class="export-card-name">${fileName}</div>
         <div class="export-card-rank">#${item.rank}</div>
