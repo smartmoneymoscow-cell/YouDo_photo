@@ -201,17 +201,23 @@
         else progressText.textContent = 'AI-анализ: ранжирование кадров...';
       }, 500);
 
-      const analyzeRes = await apiFetch(`/api/analyze/${state.sessionId}`, {
-        method: 'POST',
-        timeoutMs: 300000,
-        body: JSON.stringify({
-          model: state.params.model || null,
-          threshold: state.params.threshold,
-          top_k: state.params.topK || null,
-          ref_method: state.params.refMethod,
-          max_side: state.params.maxSide,
-        }),
-      });
+      let analyzeRes;
+      try {
+        analyzeRes = await apiFetch(`/api/analyze/${state.sessionId}`, {
+          method: 'POST',
+          timeoutMs: 300000,
+          body: JSON.stringify({
+            model: state.params.model || null,
+            threshold: state.params.threshold,
+            top_k: state.params.topK || null,
+            ref_method: state.params.refMethod,
+            max_side: state.params.maxSide,
+          }),
+        });
+      } catch (fetchErr) {
+        console.error('Analyze fetch error:', fetchErr);
+        throw fetchErr;
+      }
 
       clearInterval(progressInterval);
       progressFill.style.width = '100%';
@@ -474,14 +480,20 @@
     const timeoutMs = options.timeoutMs || 120000;
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
+      const fetchOptions = { ...options };
+      delete fetchOptions.timeoutMs;
       const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json', ...options.headers },
+        headers: { 'Content-Type': 'application/json', ...fetchOptions.headers },
         signal: controller.signal,
-        ...options,
+        ...fetchOptions,
       });
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const text = await res.text();
+          if (text) errMsg = text;
+        } catch (e) {}
+        throw new Error(errMsg);
       }
       return res.json();
     } finally {
