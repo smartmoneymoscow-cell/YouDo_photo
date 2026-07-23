@@ -3,7 +3,7 @@
 import boto3
 import uuid
 from datetime import datetime
-from app.config import (
+from backend.app.config import (
     R2_ACCOUNT_ID,
     R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY,

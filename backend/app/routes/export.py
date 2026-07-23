@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from app.services.session import get_session
+from backend.app.services.session import get_session
 
 router = APIRouter(tags=["export"])
 

@@ -8,11 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import upload, analyze, export
-from app.services.session import get_session
+from backend.app.routes import upload, analyze, export
+from backend.app.services.session import get_session
 
 # ─── Конфиг ───
-# From backend/app/main.py → go up 3 levels to reach project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 UPLOAD_DIR = os.path.join(PROJECT_ROOT, "uploads")
@@ -75,7 +74,6 @@ async def upload_video(
             out.write(content)
         saved_videos.append(f.filename)
 
-        # Извлекаем кадры через ffmpeg
         basename = Path(f.filename).stem
         cmd = [
             "ffmpeg", "-i", dest,

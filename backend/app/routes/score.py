@@ -1,8 +1,8 @@
 """Scoring API endpoint — sends images for AI quality assessment."""
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.utils.score import score_image
-from app.utils.raw_convert import raw_to_rgb, raw_to_thumbnail
+from backend.app.utils.score import score_image
+from backend.app.utils.raw_convert import raw_to_rgb, raw_to_thumbnail
 import numpy as np
 
 router = APIRouter(prefix="/score", tags=["score"])

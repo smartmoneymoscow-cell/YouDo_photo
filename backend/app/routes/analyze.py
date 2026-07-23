@@ -3,8 +3,8 @@
 import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from app.services.session import get_session
-from app.services.analyzer import analyze_session
+from backend.app.services.session import get_session
+from backend.app.services.analyzer import analyze_session
 
 router = APIRouter(tags=["analyze"])
 

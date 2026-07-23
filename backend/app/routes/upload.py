@@ -2,7 +2,7 @@
 
 import os
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.services.session import create_session, get_session
+from backend.app.services.session import create_session, get_session
 
 router = APIRouter(tags=["upload"])
 
