@@ -129,9 +129,10 @@ def image_to_histogram_vector(path: str, bins: int = 64) -> np.ndarray:
         img = img.convert('RGB')
     except (UnidentifiedImageError, OSError, Exception) as e:
         # Для RAW/CR3 файлов — заглушка (имя файла → хеш)
+        # dim = bins*3 (гистограммы) + 4*3 (квадранты) = 192+12 = 204
         h = hash(Path(path).name) % 10000
         rng = np.random.RandomState(h)
-        return rng.randn(192).astype(np.float32)
+        return rng.randn(bins * 3 + 12).astype(np.float32)
 
     img = img.resize((128, 128))
     arr = np.array(img)
