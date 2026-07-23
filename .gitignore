@@ -7,3 +7,7 @@ node_modules/
 .env
 test_photos/
 .openclaw/
+test_photos/
+test_photos2/
+test_photos3/
+.openclaw/
