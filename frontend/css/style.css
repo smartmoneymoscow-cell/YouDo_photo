@@ -785,12 +785,22 @@ body {
 
 .export-preview-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   text-align: center;
   min-width: 120px;
   overflow: hidden;
+  transition: all 0.2s;
+}
+
+.export-preview-card.accepted {
+  border-color: var(--success);
+}
+
+.export-preview-card.rejected {
+  border-color: var(--danger);
+  opacity: 0.6;
 }
 
 .export-card-thumb {

@@ -534,16 +534,21 @@
     const grid = $('#exportPreviewGrid');
     grid.innerHTML = '';
     const accepted = state.results.filter(r => r.status === 'accepted');
+    const rejected = state.results.filter(r => r.status === 'rejected');
     $('#exportPreviewCount').textContent = accepted.length;
 
-    accepted.forEach(item => {
+    // Показываем ВСЕ фото: принятые первыми, потом отклонённые
+    const allItems = [...accepted, ...rejected];
+
+    allItems.forEach(item => {
       const fileName = item.path.split('/').pop().split('\\').pop();
       const fileExt = fileName.split('.').pop().toLowerCase();
       const browserSupported = ['jpg','jpeg','png','gif','webp','svg','bmp'];
       const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
+      const isAccepted = item.status === 'accepted';
 
       const card = document.createElement('div');
-      card.className = 'export-preview-card';
+      card.className = `export-preview-card ${isAccepted ? 'accepted' : 'rejected'}`;
 
       let thumbHtml;
       if (browserSupported.includes(fileExt)) {
@@ -552,11 +557,14 @@
         thumbHtml = `<div class="export-card-thumb-placeholder">📸 ${fileExt.toUpperCase()}</div>`;
       }
 
+      const statusIcon = isAccepted ? '✅' : '❌';
+      const scoreColor = item.score >= 0.85 ? 'var(--success)' : item.score >= 0.65 ? 'var(--warning)' : 'var(--danger)';
+
       card.innerHTML = `
         ${thumbHtml}
-        <div class="export-card-score">${(item.score * 100).toFixed(1)}%</div>
+        <div class="export-card-score" style="color:${scoreColor}">${(item.score * 100).toFixed(1)}%</div>
         <div class="export-card-name">${fileName}</div>
-        <div class="export-card-rank">#${item.rank}</div>
+        <div class="export-card-rank">#${item.rank} ${statusIcon}</div>
       `;
       grid.appendChild(card);
     });
@@ -564,9 +572,14 @@
 
   function updateExportSummary() {
     const accepted = state.results.filter(r => r.status === 'accepted');
+    const rejected = state.results.filter(r => r.status === 'rejected');
     $('#summaryAccepted').textContent = accepted.length;
     $('#summaryTotal').textContent = state.results.length;
+    const best = state.results.length > 0 ? state.results[0].score : 0;
+    const worst = state.results.length > 0 ? state.results[state.results.length - 1].score : 0;
     $('#summaryBest').textContent = accepted.length > 0 ? (accepted[0].score * 100).toFixed(1) + '%' : '—';
+    const worstEl = $('#summaryWorst');
+    if (worstEl) worstEl.textContent = (worst * 100).toFixed(1) + '%';
   }
 
   // ZIP экспорт
