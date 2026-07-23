@@ -507,9 +507,18 @@ body {
 .card-thumb-wrap {
   position: relative;
   width: 100%;
+  padding-top: 75%; /* 4:3 fallback */
   aspect-ratio: 4/3;
   overflow: hidden;
   background: #0d0d1a;
+}
+
+.card-thumb-wrap > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .card-thumb {
