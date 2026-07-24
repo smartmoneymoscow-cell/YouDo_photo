@@ -170,6 +170,15 @@ body {
 .dropzone p { color: var(--text); font-size: 14px; }
 .dropzone-hint { color: var(--text-muted); font-size: 12px; }
 
+.dropzone input[type="file"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .upload-info {
   display: flex;
   gap: 16px;
