@@ -60,16 +60,25 @@
   $('#btnBackTo1').addEventListener('click', () => goToStep(1));
   $('#btnBackTo2').addEventListener('click', () => goToStep(2));
   $('#btnBackTo3').addEventListener('click', () => goToStep(3));
-  $('#btnToStep4').addEventListener('click', () => goToStep(4));
+  const btnToStep4 = $('#btnToStep4');
+  if (btnToStep4) btnToStep4.addEventListener('click', () => goToStep(4));
   $('#btnGoToExport').addEventListener('click', () => goToStep(4));
 
   // ═══ Dropzones ═══
   function initDropzone(dropzoneEl, inputEl, onFiles) {
-    dropzoneEl.addEventListener('click', () => inputEl.click());
+    if (!dropzoneEl || !inputEl) {
+      console.error('[Dropzone] Элемент не найден:', { dropzoneEl, inputEl });
+      return;
+    }
+    dropzoneEl.addEventListener('click', (e) => {
+      // Не триггерим клик если кликнули самому по инпуту
+      if (e.target === inputEl) return;
+      inputEl.click();
+    });
     dropzoneEl.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneEl.classList.add('dragover'); });
     dropzoneEl.addEventListener('dragleave', () => dropzoneEl.classList.remove('dragover'));
     dropzoneEl.addEventListener('drop', (e) => { e.preventDefault(); dropzoneEl.classList.remove('dragover'); onFiles(e.dataTransfer.files); });
-    inputEl.addEventListener('change', () => { onFiles(inputEl.files); inputEl.value = ''; });
+    inputEl.addEventListener('change', () => { if (inputEl.files.length > 0) { onFiles(inputEl.files); inputEl.value = ''; } });
   }
 
   // RAW файлы
@@ -162,6 +171,7 @@
     const progressEl = $('#analysisProgress');
     const progressText = $('#progressText');
     const progressFill = $('#progressFill');
+    let progressInterval = null;
 
     progressEl.hidden = false;
     $('#btnAnalyze').disabled = true;
@@ -200,7 +210,7 @@
 
       // Анимация прогресса пока ждём
       let pct = 50;
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         pct = Math.min(pct + 1, 90);
         progressFill.style.width = pct + '%';
         if (pct < 60) progressText.textContent = 'AI-анализ: извлечение эмбеддингов...';
@@ -260,7 +270,7 @@
       }, 1500);
 
     } catch (err) {
-      clearInterval(progressInterval);
+      if (progressInterval) clearInterval(progressInterval);
       const msg = err.name === 'AbortError' ? 'Превышен таймаут (5 мин). Уменьшите количество файлов.' : err.message;
       progressText.textContent = `Ошибка: ${msg}`;
       progressFill.style.width = '0%';
