@@ -734,25 +734,11 @@
   }
 
   async function uploadFiles(path, files) {
-    // Загружаем файлы батчами по 5, чтобы не забивать память
-    const BATCH_SIZE = 5;
-    const allSaved = [];
-    const allConverted = [];
-    let totalPhotos = 0;
-
-    for (let i = 0; i < files.length; i += BATCH_SIZE) {
-      const batch = files.slice(i, i + BATCH_SIZE);
-      const formData = new FormData();
-      for (const f of batch) formData.append('files', f);
-      const res = await fetch(API_BASE + path, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      const data = await res.json();
-      allSaved.push(...(data.saved || []));
-      allConverted.push(...(data.converted || []));
-      totalPhotos = data.total_photos || totalPhotos;
-    }
-
-    return { saved: allSaved, converted: allConverted, total_photos: totalPhotos };
+    const formData = new FormData();
+    for (const f of files) formData.append('files', f);
+    const res = await fetch(API_BASE + path, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    return res.json();
   }
 
   async function uploadVideo(path, files, fps, maxFrames) {
