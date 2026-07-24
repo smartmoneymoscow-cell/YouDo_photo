@@ -748,6 +748,21 @@ body {
 .btn-delete:hover { background: #dc2626; }
 
 /* ─── Export ─── */
+.export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.export-header h2 {
+  margin-bottom: 0;
+}
+
+.export-header .step-actions {
+  margin-top: 0;
+}
+
 .export-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -881,4 +896,5 @@ body {
   .gallery { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .viewer-content { flex-direction: column; }
   .viewer-sidebar { width: 100%; }
+  .export-header { flex-direction: column; gap: 12px; align-items: flex-start; }
 }

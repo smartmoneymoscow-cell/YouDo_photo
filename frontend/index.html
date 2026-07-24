@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>YouDo Photo — AI-отбор интерьерных фото</title>
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
   <!-- Header -->
@@ -226,7 +226,14 @@
 
     <!-- ═══ Step 4: Экспорт ═══ -->
     <section class="step-panel" id="step4">
-      <h2>Экспорт</h2>
+      <div class="export-header">
+        <h2>Экспорт</h2>
+        <div class="step-actions">
+          <button class="btn btn-secondary" id="btnBackTo3">← Назад</button>
+          <button class="btn btn-primary btn-export" id="btnExportZip">📦 Скачать ZIP</button>
+          <button class="btn btn-secondary" id="btnExportJson">📄 Скачать JSON</button>
+        </div>
+      </div>
 
       <div class="analysis-summary" id="analysisSummaryExport"></div>
 
@@ -266,12 +273,6 @@
       <div class="export-preview-section" id="exportPreviewSection">
         <h3>Все фото — принято: <span id="exportPreviewCount">0</span></h3>
         <div class="export-preview-grid" id="exportPreviewGrid"></div>
-      </div>
-
-      <div class="step-actions">
-        <button class="btn btn-secondary" id="btnBackTo3">← Назад</button>
-        <button class="btn btn-primary btn-export" id="btnExportZip">📦 Скачать ZIP</button>
-        <button class="btn btn-secondary" id="btnExportJson">📄 Скачать JSON</button>
       </div>
     </section>
   </main>
