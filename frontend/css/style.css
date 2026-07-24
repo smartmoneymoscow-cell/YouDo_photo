@@ -517,7 +517,8 @@ body {
 
 .card-thumb-wrap {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 0;
+  padding-bottom: 100%;
   overflow: hidden;
   background: #0d0d1a;
   position: relative;
