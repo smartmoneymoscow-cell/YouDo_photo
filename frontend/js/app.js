@@ -628,9 +628,12 @@
       const a = document.createElement('a');
       a.href = url;
       a.download = `youdo_photo_${state.sessionId}.zip`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
+      console.error('[Export ZIP]', err);
       alert('Ошибка экспорта: ' + err.message);
     }
   });
@@ -646,9 +649,12 @@
       const a = document.createElement('a');
       a.href = url;
       a.download = `results_${state.sessionId}.json`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
+      console.error('[Export JSON]', err);
       alert('Ошибка: ' + err.message);
     }
   });
