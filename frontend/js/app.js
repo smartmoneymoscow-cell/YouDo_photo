@@ -65,6 +65,7 @@
 
   // ═══ Dropzones ═══
   function initDropzone(dropzoneEl, inputEl, onFiles) {
+    dropzoneEl.addEventListener('click', () => inputEl.click());
     dropzoneEl.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneEl.classList.add('dragover'); });
     dropzoneEl.addEventListener('dragleave', () => dropzoneEl.classList.remove('dragover'));
     dropzoneEl.addEventListener('drop', (e) => { e.preventDefault(); dropzoneEl.classList.remove('dragover'); onFiles(e.dataTransfer.files); });
