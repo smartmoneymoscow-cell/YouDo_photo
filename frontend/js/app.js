@@ -42,6 +42,10 @@
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    if (step === 2) {
+      // При возврате на шаг 2 — показываем уже загруженные файлы
+      updateLoadedFilesSummary();
+    }
     if (step === 3) {
       // При входе на шаг 3 — показываем ВСЕ фото (принятые с зелёной рамкой)
       $$('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -86,6 +90,8 @@
     for (const f of files) state.rawFiles.push(f);
     updateRawInfo();
     updateNextButton();
+    state.sessionId = null; // Сброс сессии при изменении файлов
+    state.results = [];
   });
 
   function updateRawInfo() {
@@ -130,6 +136,8 @@
     for (const f of files) state.refFiles.push(f);
     updateRefPreview();
     updateNextButton();
+    state.sessionId = null; // Сброс сессии при изменении эталонов
+    state.results = [];
   });
 
   function updateRefPreview() {
@@ -159,6 +167,44 @@
     }
   });
 
+  // ═══ Сводка загруженных файлов (при возврате на шаг 2) ═══
+  function updateLoadedFilesSummary() {
+    let el = $('#loadedFilesSummary');
+    if (!el) {
+      // Создаём блок сводки, если его ещё нет
+      el = document.createElement('div');
+      el.id = 'loadedFilesSummary';
+      el.className = 'analysis-summary';
+      const paramsGrid = $('.params-grid');
+      if (paramsGrid) paramsGrid.parentNode.insertBefore(el, paramsGrid);
+    }
+
+    const hasFiles = state.rawFiles.length > 0 || state.refFiles.length > 0 || state.videoFiles.length > 0;
+    if (!hasFiles) {
+      el.innerHTML = '';
+      return;
+    }
+
+    const sessionId = state.sessionId ? `<span style="color:var(--success)">сессия ${state.sessionId}</span>` : '<span style="color:var(--warning)">ещё не загружены</span>';
+    el.innerHTML = `
+      <div class="summary-card">
+        <div class="summary-stat"><span class="stat-num">${state.refFiles.length}</span><span class="stat-label">эталонов</span></div>
+        <div class="summary-stat"><span class="stat-num">${state.rawFiles.length}</span><span class="stat-label">фото</span></div>
+        <div class="summary-stat"><span class="stat-num">${state.videoFiles.length}</span><span class="stat-label">видео</span></div>
+        <div class="summary-stat"><span class="stat-num">${state.results.length}</span><span class="stat-label">результатов</span></div>
+        <div class="summary-stat"><span class="stat-num" style="font-size:14px">${sessionId}</span><span class="stat-label">на сервере</span></div>
+      </div>
+    `;
+
+    // Обновляем текст кнопки
+    const btn = $('#btnAnalyze');
+    if (state.results.length > 0) {
+      btn.textContent = '🔄 Перезапустить анализ';
+    } else {
+      btn.textContent = '🔍 Запустить анализ';
+    }
+  }
+
   // ═══ Анализ ═══
   $('#btnAnalyze').addEventListener('click', async () => {
     // Собираем параметры
@@ -179,29 +225,35 @@
     progressFill.style.width = '5%';
 
     try {
-      // 1. Создать сессию
-      const sessRes = await apiFetch('/api/session/create', { method: 'POST' });
-      state.sessionId = sessRes.session_id;
+      // 1. Создать сессию (только если ещё нет)
+      if (!state.sessionId) {
+        const sessRes = await apiFetch('/api/session/create', { method: 'POST' });
+        state.sessionId = sessRes.session_id;
 
-      // 2. Загрузить эталоны
-      progressText.textContent = `Загрузка эталонов (${state.refFiles.length})...`;
-      progressFill.style.width = '15%';
-      await uploadFiles(`/api/upload/references/${state.sessionId}`, state.refFiles);
+        // 2. Загрузить эталоны
+        progressText.textContent = `Загрузка эталонов (${state.refFiles.length})...`;
+        progressFill.style.width = '15%';
+        await uploadFiles(`/api/upload/references/${state.sessionId}`, state.refFiles);
 
-      // 3. Загрузить RAW фото
-      if (state.rawFiles.length > 0) {
-        progressText.textContent = `Загрузка RAW файлов (${state.rawFiles.length})...`;
+        // 3. Загрузить RAW фото
+        if (state.rawFiles.length > 0) {
+          progressText.textContent = `Загрузка RAW файлов (${state.rawFiles.length})...`;
+          progressFill.style.width = '30%';
+          await uploadFiles(`/api/upload/photos/${state.sessionId}`, state.rawFiles);
+        }
+
+        // 3b. Загрузить видео (если есть)
+        if (state.videoFiles.length > 0) {
+          const fps = parseFloat($('#videoFps').value) || 1;
+          const maxFrames = parseInt($('#videoMaxFrames').value) || 30;
+          progressText.textContent = `Загрузка видео (${state.videoFiles.length}) + извлечение кадров...`;
+          progressFill.style.width = '35%';
+          await uploadVideo(`/api/upload/video/${state.sessionId}`, state.videoFiles, fps, maxFrames);
+        }
+      } else {
+        // Сессия уже есть — файлы на сервере, просто перезапускаем анализ
+        progressText.textContent = 'Файлы уже загружены, запуск анализа...';
         progressFill.style.width = '30%';
-        await uploadFiles(`/api/upload/photos/${state.sessionId}`, state.rawFiles);
-      }
-
-      // 3b. Загрузить видео (если есть)
-      if (state.videoFiles.length > 0) {
-        const fps = parseFloat($('#videoFps').value) || 1;
-        const maxFrames = parseInt($('#videoMaxFrames').value) || 30;
-        progressText.textContent = `Загрузка видео (${state.videoFiles.length}) + извлечение кадров...`;
-        progressFill.style.width = '35%';
-        await uploadVideo(`/api/upload/video/${state.sessionId}`, state.videoFiles, fps, maxFrames);
       }
 
       // 4. Запустить анализ
@@ -234,25 +286,11 @@
       progressFill.style.width = '100%';
       progressText.textContent = `Готово! ${analyzeRes.accepted_count} из ${analyzeRes.total} принято`;
 
-      // Сохраняем результаты
-      console.log('[Analyze] Response:', JSON.stringify(analyzeRes).substring(0, 500));
-      console.log('[Analyze] results count:', analyzeRes.results?.length, 'accepted:', analyzeRes.accepted_count);
-
       state.results = (analyzeRes.results || []).map(r => ({
         ...r,
         status: r.accepted ? 'accepted' : 'rejected',
       }));
 
-      console.log('[Analyze] state.results count:', state.results.length);
-      if (state.results.length > 0) {
-        const first = state.results[0];
-        const fn = first.path.split('/').pop().split('\\').pop();
-        console.log('[Analyze] First result path:', first.path);
-        console.log('[Analyze] Extracted filename:', fn);
-        console.log('[Analyze] Image URL:', `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fn)}`);
-      }
-
-      // Если 0 результатов — показать ошибку
       if (state.results.length === 0) {
         progressText.textContent = 'Ошибка: анализ не вернул результатов';
         progressFill.style.width = '0%';
@@ -263,10 +301,10 @@
       // Показываем сводку
       showAnalysisSummary(analyzeRes);
 
-      // Переход сразу на шаг 4 (экспорт) через 1.5 сек — пропускаем модерацию
+      // Переход на шаг 3 (модерация) через 1.5 сек
       setTimeout(() => {
         progressEl.hidden = true;
-        goToStep(4);
+        goToStep(3);
       }, 1500);
 
     } catch (err) {
