@@ -361,12 +361,27 @@
         <button class="card-toggle" data-idx="${realIdx}" title="Принять/Отклонить">${statusIcon}</button>
       `;
 
+      // Гарантируем квадратную форму превью
+      const wrap = card.querySelector('.card-thumb-wrap');
+      if (wrap) {
+        wrap.style.width = '100%';
+        wrap.style.aspectRatio = '1 / 1';
+        wrap.style.height = '0';
+        wrap.style.paddingBottom = '100%';
+        wrap.style.position = 'relative';
+        wrap.style.overflow = 'hidden';
+      }
+
       // Загрузка только для поддерживаемых форматов
       if (browserSupported.includes(fileExt)) {
         (function(wrapEl, url, name) {
           const img = new Image();
           img.className = 'card-thumb';
           img.alt = name;
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.style.display = 'block';
           img.onload = function() {
             if (img.naturalWidth > 0) {
               wrapEl.innerHTML = '';
