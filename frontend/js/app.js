@@ -339,10 +339,6 @@
     }
   }
 
-  function showFallback(wrapEl, name) {
-    wrapEl.innerHTML = `<div class="card-thumb-fallback"><span class="fallback-icon">📸</span><span class="fallback-name">${name}</span><span class="fallback-hint">RAW/CR3 — превью недоступно</span></div>`;
-  }
-
   // ═══ Галерея ═══
   function renderGallery(filter = 'all') {
     const gallery = $('#gallery');
@@ -372,70 +368,24 @@
 
       const scorePct = (item.score * 100).toFixed(1);
       const scoreClass = item.score >= 0.85 ? 'high' : item.score >= 0.65 ? 'mid' : 'low';
-      const statusIcon = item.status === 'accepted' ? '✅' : '❌';
       const fileName = item.path.split('/').pop().split('\\').pop();
       const fileExt = fileName.split('.').pop().toLowerCase();
       const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
       const browserSupported = ['jpg','jpeg','png','gif','webp','svg','bmp'];
 
-      console.log('[Gallery] #%d img=%s ext=%s', item.rank, imgUrl, fileExt);
-
-      let thumbHtml;
-      if (browserSupported.includes(fileExt)) {
-        // Браузер может показать — грузим
-        thumbHtml = `<div class="card-thumb-wrap" id="wrap-${realIdx}"><div class="card-thumb-loading">⏳</div></div>`;
-      } else {
-        // RAW/CR3/NEF и т.д. — сразу показываем заглушку
-        thumbHtml = `<div class="card-thumb-wrap"><div class="card-thumb-fallback"><span class="fallback-icon">📸</span><span class="fallback-name">${fileName}</span><span class="fallback-hint">${fileExt.toUpperCase()} — превью недоступно</span></div></div>`;
-      }
+      const imgHtml = browserSupported.includes(fileExt)
+        ? `<img class="card-img" src="${imgUrl}" alt="${fileName}" loading="lazy">`
+        : `<div class="card-img-placeholder">📸 ${fileExt.toUpperCase()}</div>`;
 
       card.innerHTML = `
         <div class="card-score-bar ${scoreClass}">${scorePct}%</div>
-        ${thumbHtml}
+        ${imgHtml}
         <div class="card-info">
           <span class="card-rank">#${item.rank}</span>
           <span class="card-fname">${fileName}</span>
         </div>
       `;
 
-      // Гарантируем квадратную форму превью
-      const wrap = card.querySelector('.card-thumb-wrap');
-      if (wrap) {
-        wrap.style.width = '100%';
-        wrap.style.aspectRatio = '1 / 1';
-        wrap.style.overflow = 'hidden';
-        wrap.style.position = 'relative';
-        wrap.style.backgroundSize = 'cover';
-        wrap.style.backgroundPosition = 'center';
-        wrap.style.backgroundRepeat = 'no-repeat';
-      }
-
-      // Загрузка только для поддерживаемых форматов
-      if (browserSupported.includes(fileExt)) {
-        (function(wrapEl, url, name) {
-          const img = new Image();
-          img.onload = function() {
-            if (img.naturalWidth > 0) {
-              // Используем background-image вместо img — гарантированный квадрат
-              wrapEl.innerHTML = '';
-              wrapEl.style.backgroundImage = `url(${url})`;
-              wrapEl.style.backgroundSize = 'cover';
-              wrapEl.style.backgroundPosition = 'center';
-              wrapEl.style.backgroundRepeat = 'no-repeat';
-            } else {
-              showFallback(wrapEl, name);
-            }
-          };
-          img.onerror = function() {
-            showFallback(wrapEl, name);
-          };
-          img.src = url;
-        })(card.querySelector('.card-thumb-wrap'), imgUrl, fileName);
-      }
-
-      card.addEventListener('click', () => {
-        openViewer(realIdx);
-      });
 
       gallery.appendChild(card);
     });
@@ -477,90 +427,6 @@
     renderGallery(getCurrentFilter());
   });
 
-  // ═══ Полноэкранный просмотр ═══
-  let viewerIndex = 0;
-
-  function openViewer(index) {
-    viewerIndex = index;
-    const item = state.results[index];
-    const fileName = item.path.split('/').pop().split('\\').pop();
-    const imgUrl = `${API_BASE}/api/files/${state.sessionId}/photos/${encodeURIComponent(fileName)}`;
-    const refName = state.refFiles.length > 0 ? state.refFiles[0].name : 'эталон';
-
-    // Фото — с проверкой формата
-    const viewerImgEl = $('#viewerImage');
-    const vExt = fileName.split('.').pop().toLowerCase();
-    const vSupported = ['jpg','jpeg','png','gif','webp','svg','bmp'];
-
-    if (!vSupported.includes(vExt)) {
-      // RAW файл — сразу заглушка
-      viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>${vExt.toUpperCase()} — превью недоступно в браузере<br><small>Файл будет конвертирован при экспорте</small></div>`;
-    } else {
-      viewerImgEl.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-muted)">⏳ Загрузка...</div>';
-      const vImg = new Image();
-      vImg.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
-      vImg.alt = fileName;
-      vImg.onload = function() {
-        viewerImgEl.innerHTML = '';
-        viewerImgEl.appendChild(vImg);
-      };
-      vImg.onerror = function() {
-        viewerImgEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted)">📸<br><b>${fileName}</b><br><br>Не удалось загрузить изображение</div>`;
-      };
-      vImg.src = imgUrl;
-    }
-
-    // Скор
-    const scoreColor = item.score >= 0.85 ? 'var(--success)' : item.score >= 0.65 ? 'var(--warning)' : 'var(--danger)';
-    const scoreBar = item.score >= 0.85 ? '#4caf50' : item.score >= 0.65 ? '#ff9800' : '#f44336';
-    $('#viewerScore').innerHTML = `
-      <div style="font-size:48px;font-weight:700;color:${scoreColor}">${(item.score * 100).toFixed(1)}%</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-top:4px">сходство с эталоном</div>
-      <div style="margin-top:12px;background:#1a1a2e;border-radius:8px;overflow:hidden;height:8px">
-        <div style="width:${(item.score * 100).toFixed(0)}%;height:100%;background:${scoreBar};transition:width 0.3s"></div>
-      </div>
-    `;
-
-    // Инфо + метрики
-    const diffPct = ((1 - item.score) * 100).toFixed(1);
-    const quality = item.score >= 0.85 ? 'Отличное' : item.score >= 0.65 ? 'Хорошее' : item.score >= 0.5 ? 'Среднее' : 'Низкое';
-    const qualityColor = item.score >= 0.85 ? '#4caf50' : item.score >= 0.65 ? '#ff9800' : '#f44336';
-    $('#viewerInfo').innerHTML = `
-      <div style="font-size:14px;line-height:1.8">
-        <div><b>Файл:</b> ${fileName}</div>
-        <div><b>Ранг:</b> #${item.rank} из ${state.results.length}</div>
-        <div><b>Статус:</b> ${item.status === 'accepted' ? '✅ Принят' : '❌ Отклонён'}</div>
-        <hr style="border-color:#333;margin:8px 0">
-        <div><b>Эталон:</b> ${refName}</div>
-        <div><b>Сходство:</b> <span style="color:${scoreColor}">${(item.score * 100).toFixed(1)}%</span></div>
-        <div><b>Разница:</b> <span style="color:#f44336">${diffPct}%</span></div>
-        <div><b>Качество:</b> <span style="color:${qualityColor}">${quality}</span></div>
-        <div><b>Модель:</b> ${state.results[0]?.model || 'auto'}</div>
-      </div>
-    `;
-
-    $('#fullscreenViewer').hidden = false;
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeViewer() {
-    $('#fullscreenViewer').hidden = true;
-    document.body.style.overflow = '';
-    renderGallery(getCurrentFilter());
-  }
-
-  $('#viewerClose').addEventListener('click', closeViewer);
-  $('#viewerPrev').addEventListener('click', () => { viewerIndex = Math.max(0, viewerIndex - 1); openViewer(viewerIndex); });
-  $('#viewerNext').addEventListener('click', () => { viewerIndex = Math.min(state.results.length - 1, viewerIndex + 1); openViewer(viewerIndex); });
-
-
-  document.addEventListener('keydown', (e) => {
-    if ($('#fullscreenViewer').hidden) return;
-    if (e.key === 'Escape') closeViewer();
-    if (e.key === 'ArrowLeft') { viewerIndex = Math.max(0, viewerIndex - 1); openViewer(viewerIndex); }
-    if (e.key === 'ArrowRight') { viewerIndex = Math.min(state.results.length - 1, viewerIndex + 1); openViewer(viewerIndex); }
-
-  });
 
   // ═══ Экспорт ═══
   function buildExportPreview() {
