@@ -8,7 +8,7 @@ import zipfile
 import tempfile
 from PIL import Image
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -42,7 +42,7 @@ def _create_analyzed_session():
         client.post(f"/api/upload/photos/{sid}",
                     files=[("files", (f"photo_{i}.jpg", make_jpeg_bytes(color=(200+i*10, 50, 50)), "image/jpeg"))])
 
-    from app.services.session import get_session
+    from backend.app.services.session import get_session
     session = get_session(sid)
     session.status = "analyzed"
     session.results = [
@@ -234,7 +234,7 @@ def test_upload_duplicate_filenames_renamed():
 
 def test_upload_file_size_limit():
     """Файл больше 100MB отклоняется."""
-    from app.routes.upload import MAX_FILE_SIZE
+    from backend.app.routes.upload import MAX_FILE_SIZE
 
     resp = client.post("/api/session/create")
     sid = resp.json()["session_id"]
