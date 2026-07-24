@@ -348,8 +348,7 @@ body {
 
 .btn-sm { padding: 8px 16px; font-size: 13px; }
 
-.btn-accept { background: var(--success); color: white; }
-.btn-reject { background: var(--danger); color: white; }
+
 
 .btn-export {
   font-size: 16px;
@@ -634,24 +633,7 @@ body {
   white-space: nowrap;
 }
 
-.card-toggle {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--surface-2);
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
 
-.card-toggle:hover { transform: scale(1.2); }
 
 /* ─── Fullscreen Viewer ─── */
 .fullscreen-viewer {
@@ -736,18 +718,7 @@ body {
   gap: 8px;
 }
 
-.btn-delete {
-  background: var(--danger);
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-}
 
-.btn-delete:hover { background: #dc2626; }
 
 /* ─── Export ─── */
 .export-header {

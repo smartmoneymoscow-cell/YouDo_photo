@@ -396,7 +396,6 @@
           <span class="card-rank">#${item.rank}</span>
           <span class="card-fname">${fileName}</span>
         </div>
-        <button class="card-toggle" data-idx="${realIdx}" title="Принять/Отклонить">${statusIcon}</button>
       `;
 
       // Гарантируем квадратную форму превью
@@ -434,13 +433,7 @@
         })(card.querySelector('.card-thumb-wrap'), imgUrl, fileName);
       }
 
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('.card-toggle')) {
-          const i = parseInt(e.target.closest('.card-toggle').dataset.idx);
-          state.results[i].status = state.results[i].status === 'accepted' ? 'rejected' : 'accepted';
-          renderGallery(getCurrentFilter());
-          return;
-        }
+      card.addEventListener('click', () => {
         openViewer(realIdx);
       });
 
@@ -546,13 +539,6 @@
       </div>
     `;
 
-    // Кнопки
-    const isAccepted = item.status === 'accepted';
-    $('#viewerAccept').textContent = isAccepted ? '✅ Принят' : '✅ Принять';
-    $('#viewerAccept').style.opacity = isAccepted ? '0.5' : '1';
-    $('#viewerReject').textContent = !isAccepted ? '❌ Отклонён' : '❌ Отклонить';
-    $('#viewerReject').style.opacity = !isAccepted ? '0.5' : '1';
-
     $('#fullscreenViewer').hidden = false;
     document.body.style.overflow = 'hidden';
   }
@@ -566,30 +552,14 @@
   $('#viewerClose').addEventListener('click', closeViewer);
   $('#viewerPrev').addEventListener('click', () => { viewerIndex = Math.max(0, viewerIndex - 1); openViewer(viewerIndex); });
   $('#viewerNext').addEventListener('click', () => { viewerIndex = Math.min(state.results.length - 1, viewerIndex + 1); openViewer(viewerIndex); });
-  $('#viewerAccept').addEventListener('click', () => { state.results[viewerIndex].status = 'accepted'; viewerIndex < state.results.length - 1 ? openViewer(++viewerIndex) : closeViewer(); });
-  $('#viewerReject').addEventListener('click', () => { state.results[viewerIndex].status = 'rejected'; viewerIndex < state.results.length - 1 ? openViewer(++viewerIndex) : closeViewer(); });
-  $('#viewerDelete').addEventListener('click', async () => {
-    const item = state.results[viewerIndex];
-    const fileName = item.path.split('/').pop().split('\\').pop();
-    if (!confirm(`Удалить ${fileName}?`)) return;
-    try {
-      await apiFetch(`/api/sessions/${state.sessionId}/photos/${encodeURIComponent(fileName)}`, { method: 'DELETE' });
-      state.results.splice(viewerIndex, 1);
-      if (state.results.length === 0) { closeViewer(); return; }
-      viewerIndex = Math.min(viewerIndex, state.results.length - 1);
-      openViewer(viewerIndex);
-    } catch (e) {
-      alert('Ошибка удаления: ' + e.message);
-    }
-  });
+
 
   document.addEventListener('keydown', (e) => {
     if ($('#fullscreenViewer').hidden) return;
     if (e.key === 'Escape') closeViewer();
     if (e.key === 'ArrowLeft') { viewerIndex = Math.max(0, viewerIndex - 1); openViewer(viewerIndex); }
     if (e.key === 'ArrowRight') { viewerIndex = Math.min(state.results.length - 1, viewerIndex + 1); openViewer(viewerIndex); }
-    if (e.key === 'a' || e.key === 'ф') { state.results[viewerIndex].status = 'accepted'; viewerIndex < state.results.length - 1 ? openViewer(++viewerIndex) : closeViewer(); }
-    if (e.key === 'r' || e.key === 'к') { state.results[viewerIndex].status = 'rejected'; viewerIndex < state.results.length - 1 ? openViewer(++viewerIndex) : closeViewer(); }
+
   });
 
   // ═══ Экспорт ═══
