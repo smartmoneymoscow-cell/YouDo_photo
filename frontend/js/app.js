@@ -366,26 +366,25 @@
       if (wrap) {
         wrap.style.width = '100%';
         wrap.style.aspectRatio = '1 / 1';
-        wrap.style.height = '0';
-        wrap.style.paddingBottom = '100%';
-        wrap.style.position = 'relative';
         wrap.style.overflow = 'hidden';
+        wrap.style.position = 'relative';
+        wrap.style.backgroundSize = 'cover';
+        wrap.style.backgroundPosition = 'center';
+        wrap.style.backgroundRepeat = 'no-repeat';
       }
 
       // Загрузка только для поддерживаемых форматов
       if (browserSupported.includes(fileExt)) {
         (function(wrapEl, url, name) {
           const img = new Image();
-          img.className = 'card-thumb';
-          img.alt = name;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'cover';
-          img.style.display = 'block';
           img.onload = function() {
             if (img.naturalWidth > 0) {
+              // Используем background-image вместо img — гарантированный квадрат
               wrapEl.innerHTML = '';
-              wrapEl.appendChild(img);
+              wrapEl.style.backgroundImage = `url(${url})`;
+              wrapEl.style.backgroundSize = 'cover';
+              wrapEl.style.backgroundPosition = 'center';
+              wrapEl.style.backgroundRepeat = 'no-repeat';
             } else {
               showFallback(wrapEl, name);
             }
@@ -578,7 +577,7 @@
 
       let thumbHtml;
       if (browserSupported.includes(fileExt)) {
-        thumbHtml = `<img class="export-card-thumb" src="${imgUrl}" alt="${fileName}" onerror="this.style.display='none'">`;
+        thumbHtml = `<div class="export-card-thumb" style="background-image:url(${imgUrl});background-size:cover;background-position:center"></div>`;
       } else {
         thumbHtml = `<div class="export-card-thumb-placeholder">📸 ${fileExt.toUpperCase()}</div>`;
       }
