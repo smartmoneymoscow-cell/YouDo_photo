@@ -610,10 +610,15 @@
   // ZIP экспорт
   $('#btnExportZip').addEventListener('click', async () => {
     if (!state.sessionId) return alert('Сначала выполните анализ');
+    const btn = $('#btnExportZip');
+    const origText = btn.textContent;
     try {
       const format = $('#exportFormat').value;
       const quality = parseInt($('#exportQuality').value);
       const includeRejected = $('#exportIncludeRejected').checked;
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Формирование ZIP...';
 
       const resp = await fetch(`${API_BASE}/api/export/${state.sessionId}/zip`, {
         method: 'POST',
@@ -635,6 +640,9 @@
     } catch (err) {
       console.error('[Export ZIP]', err);
       alert('Ошибка экспорта: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
     }
   });
 
@@ -688,11 +696,25 @@
   }
 
   async function uploadFiles(path, files) {
-    const formData = new FormData();
-    for (const f of files) formData.append('files', f);
-    const res = await fetch(API_BASE + path, { method: 'POST', body: formData });
-    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-    return res.json();
+    // Загружаем файлы батчами по 5, чтобы не забивать память
+    const BATCH_SIZE = 5;
+    const allSaved = [];
+    const allConverted = [];
+    let totalPhotos = 0;
+
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      const batch = files.slice(i, i + BATCH_SIZE);
+      const formData = new FormData();
+      for (const f of batch) formData.append('files', f);
+      const res = await fetch(API_BASE + path, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const data = await res.json();
+      allSaved.push(...(data.saved || []));
+      allConverted.push(...(data.converted || []));
+      totalPhotos = data.total_photos || totalPhotos;
+    }
+
+    return { saved: allSaved, converted: allConverted, total_photos: totalPhotos };
   }
 
   async function uploadVideo(path, files, fps, maxFrames) {

@@ -1,6 +1,7 @@
 """API: загрузка файлов с конвертацией RAW→JPG."""
 
 import os
+import re
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from backend.app.services.session import create_session, get_session
@@ -8,6 +9,37 @@ from backend.app.services.session import create_session, get_session
 router = APIRouter(tags=["upload"])
 
 RAW_EXT = {'.cr3', '.cr2', '.nef', '.arw', '.raf', '.rw2', '.dng', '.raw'}
+
+# Макс. размер файла — 100MB
+MAX_FILE_SIZE = 100 * 1024 * 1024
+
+
+def _sanitize_filename(name: str) -> str:
+    """Убирает path traversal и опасные символы из имени файла."""
+    # Только basename
+    name = os.path.basename(name)
+    # Убираем всё кроме букв, цифр, точек, дефисов, подчёркиваний
+    name = re.sub(r'[^\w.\-]', '_', name)
+    # Не начинается с точки (скрытые файлы)
+    if name.startswith('.'):
+        name = '_' + name
+    return name or 'unnamed'
+
+
+def _unique_path(directory: str, filename: str) -> str:
+    """Генерирует уникальный путь, если файл с таким именем уже существует."""
+    dest = os.path.join(directory, filename)
+    if not os.path.exists(dest):
+        return dest
+    stem = Path(filename).stem
+    ext = Path(filename).suffix
+    counter = 1
+    while True:
+        new_name = f"{stem}_{counter}{ext}"
+        dest = os.path.join(directory, new_name)
+        if not os.path.exists(dest):
+            return dest
+        counter += 1
 
 
 def _convert_raw_to_jpg(src_path: str, dst_path: str, max_side: int = 1024) -> bool:
@@ -37,6 +69,20 @@ async def api_create_session():
     return {"session_id": session.id, "status": "created"}
 
 
+async def _read_upload_file(f: UploadFile) -> bytes:
+    """Читает файл по частям, проверяя размер."""
+    content = bytearray()
+    chunk_size = 1024 * 1024  # 1MB
+    while True:
+        chunk = await f.read(chunk_size)
+        if not chunk:
+            break
+        content.extend(chunk)
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(413, f"Файл {f.filename} слишком большой (макс. 100MB)")
+    return bytes(content)
+
+
 @router.post("/upload/references/{session_id}")
 async def upload_references(session_id: str, files: list[UploadFile] = File(...)):
     """Загружает эталонные JPG."""
@@ -46,14 +92,16 @@ async def upload_references(session_id: str, files: list[UploadFile] = File(...)
 
     saved = []
     for f in files:
-        dest = os.path.join(session.ref_dir, f.filename)
-        content = await f.read()
+        safe_name = _sanitize_filename(f.filename)
+        content = await _read_upload_file(f)
+        dest = _unique_path(session.ref_dir, safe_name)
         with open(dest, "wb") as out:
             out.write(content)
-        saved.append(f.filename)
+        saved.append(os.path.basename(dest))
         session.ref_files.append(dest)
 
     session.status = "uploaded"
+    session.save()
     return {"saved": saved, "total_refs": len(session.ref_files)}
 
 
@@ -67,18 +115,19 @@ async def upload_photos(session_id: str, files: list[UploadFile] = File(...)):
     saved = []
     converted = []
     for f in files:
-        ext = Path(f.filename).suffix.lower()
-        content = await f.read()
+        safe_name = _sanitize_filename(f.filename)
+        ext = Path(safe_name).suffix.lower()
+        content = await _read_upload_file(f)
 
-        # Сохраняем оригинал
-        src_path = os.path.join(session.photo_dir, f.filename)
+        # Сохраняем оригинал с уникальным именем
+        src_path = _unique_path(session.photo_dir, safe_name)
         with open(src_path, "wb") as out:
             out.write(content)
 
         # Если RAW — конвертируем в JPG
         if ext in RAW_EXT:
-            jpg_name = Path(f.filename).stem + ".jpg"
-            jpg_path = os.path.join(session.photo_dir, jpg_name)
+            jpg_name = Path(src_path).stem + ".jpg"
+            jpg_path = _unique_path(session.photo_dir, jpg_name)
             if _convert_raw_to_jpg(src_path, jpg_path):
                 # Удаляем оригинал RAW — он не нужен для отображения
                 try:
@@ -86,16 +135,17 @@ async def upload_photos(session_id: str, files: list[UploadFile] = File(...)):
                 except OSError:
                     pass
                 session.photo_files.append(jpg_path)
-                converted.append(f"{f.filename} → {jpg_name}")
-                saved.append(jpg_name)
+                converted.append(f"{safe_name} → {os.path.basename(jpg_path)}")
+                saved.append(os.path.basename(jpg_path))
             else:
                 # Конвертация не удалась — сохраняем оригинал
                 session.photo_files.append(src_path)
-                saved.append(f.filename)
+                saved.append(os.path.basename(src_path))
         else:
             session.photo_files.append(src_path)
-            saved.append(f.filename)
+            saved.append(os.path.basename(src_path))
 
+    session.save()
     return {
         "saved": saved,
         "converted": converted,
